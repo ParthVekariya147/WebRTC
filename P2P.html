@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Nexus - WhatsApp Style</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-main: #0b141a;
+            --bg-panel: #111b21;
+            --bg-header: #202c33;
+            --bg-search: #202c33;
+            --text-main: #e9edef;
+            --text-muted: #8696a0;
+            --border-color: #222d34;
+            --msg-in: #202c33;
+            --msg-out: #005c4b;
+            --accent: #00a884;
+            --danger: #f15c6d;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Screens */
+        .screen { display: none; width: 100%; height: 100%; }
+        .screen.active { display: flex; }
+
+        /* Login Screen */
+        #login-screen { justify-content: center; align-items: center; }
+        .login-box {
+            background: var(--bg-panel);
+            padding: 40px;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 17px 50px 0 rgba(11,20,26,.19), 0 12px 15px 0 rgba(11,20,26,.24);
+            text-align: center;
+        }
+        .login-box h2 { margin-bottom: 10px; color: var(--text-main); }
+        .login-box p { color: var(--text-muted); margin-bottom: 25px; font-size: 0.95rem; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: var(--accent); }
+        .input-group input {
+            width: 100%; padding: 12px; background: var(--bg-search);
+            border: 1px solid var(--border-color); border-radius: 5px;
+            color: var(--text-main); font-size: 1rem;
+        }
+        .input-group input:focus { outline: none; border-color: var(--accent); }
+        .btn {
+            background: var(--accent); color: #111b21; border: none;
+            padding: 12px 20px; border-radius: 5px; font-weight: bold;
+            cursor: pointer; width: 100%; font-size: 1rem;
+        }
+        .btn:hover { filter: brightness(1.1); }
+        #login-error { color: var(--danger); margin-top: 15px; font-size: 0.9rem; }
+
+        /* Main App Screen */
+        #app-screen { width: 100%; height: 100%; display: none; flex-direction: row; }
+        #app-screen.active { display: flex; }
+
+        /* Sidebar */
+        .sidebar {
+            width: 30%; min-width: 300px; max-width: 400px;
+            background: var(--bg-panel); border-right: 1px solid var(--border-color);
+            display: flex; flex-direction: column;
+        }
+        .header {
+            height: 60px; background: var(--bg-header); display: flex;
+            align-items: center; justify-content: space-between; padding: 10px 16px;
+        }
+        .my-profile { display: flex; align-items: center; gap: 10px; }
+        .avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: var(--text-muted); display: flex; align-items: center;
+            justify-content: center; color: var(--bg-panel); font-size: 1.2rem;
+        }
+        .header-actions button {
+            background: none; border: none; color: var(--text-muted);
+            font-size: 1.2rem; cursor: pointer; padding: 8px;
+        }
+        .chat-list { flex: 1; overflow-y: auto; }
+        .chat-item {
+            display: flex; align-items: center; padding: 12px 16px;
+            cursor: pointer; border-bottom: 1px solid var(--border-color);
+            gap: 15px;
+        }
+        .chat-item:hover { background: var(--bg-header); }
+        .chat-item.active { background: var(--bg-search); }
+        .chat-info { flex: 1; overflow: hidden; }
+        .chat-name { font-size: 1.05rem; color: var(--text-main); margin-bottom: 3px; }
+        .chat-preview { font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-status { font-size: 0.75rem; color: var(--accent); }
+        .chat-status.disconnected { color: var(--danger); }
+        .unread-badge {
+            background: var(--accent); color: #111b21; font-size: 0.75rem;
+            padding: 2px 6px; border-radius: 10px; font-weight: bold;
+        }
+
+        /* Chat Area */
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg-main); position: relative; }
+        .no-chat-selected {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column; color: var(--text-muted); text-align: center;
+            background: var(--bg-panel); z-index: 10;
+        }
+        .no-chat-selected i { font-size: 4rem; margin-bottom: 20px; opacity: 0.5; }
+        
+        .chat-header {
+            height: 60px; background: var(--bg-header); display: flex;
+            align-items: center; padding: 10px 16px; gap: 15px; border-bottom: 1px solid var(--border-color);
+        }
+        .chat-header-info h2 { font-size: 1rem; font-weight: 400; margin-bottom: 2px; }
+        .chat-header-info p { font-size: 0.8rem; color: var(--text-muted); }
+        
+        .messages-container {
+            flex: 1; padding: 20px 5%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+            background-image: url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png');
+            background-size: initial;
+        }
+        .message { max-width: 65%; display: flex; flex-direction: column; position: relative; }
+        .message.out { align-self: flex-end; }
+        .message.in { align-self: flex-start; }
+        .bubble {
+            padding: 8px 12px; border-radius: 7px; font-size: 0.95rem; line-height: 1.4;
+            box-shadow: 0 1px 0.5px rgba(11,20,26,.13); word-wrap: break-word;
+        }
+        .message.out .bubble { background: var(--msg-out); border-top-right-radius: 0; }
+        .message.in .bubble { background: var(--msg-in); border-top-left-radius: 0; }
+        .time { font-size: 0.65rem; color: rgba(255,255,255,0.6); align-self: flex-end; margin-top: 4px; margin-left: 10px; }
+        .media-container { margin-bottom: 5px; border-radius: 5px; overflow: hidden; }
+        .media-container img, .media-container video { max-width: 100%; max-height: 300px; border-radius: 5px; display: block; }
+        
+        .input-area {
+            min-height: 62px; background: var(--bg-header); display: flex;
+            align-items: center; padding: 10px 16px; gap: 10px;
+        }
+        .btn-icon { background: none; border: none; color: var(--text-muted); font-size: 1.4rem; cursor: pointer; padding: 5px 10px; }
+        .btn-icon:hover { color: var(--text-main); }
+        .input-wrapper { flex: 1; background: var(--bg-search); border-radius: 8px; padding: 9px 15px; }
+        .input-wrapper input { width: 100%; background: none; border: none; color: var(--text-main); font-size: 1rem; }
+        .input-wrapper input:focus { outline: none; }
+        
+        /* Modals */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11,20,26,0.85); display: none; align-items: center; justify-content: center; z-index: 100;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--bg-panel); width: 100%; max-width: 400px;
+            border-radius: 10px; overflow: hidden;
+        }
+        .modal-header {
+            background: var(--bg-header); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-body { padding: 20px; }
+        .close-modal { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; }
+        
+        #file-input { display: none; }
+        .attachment-preview {
+            position: absolute; bottom: 70px; left: 20px; background: var(--bg-panel);
+            padding: 10px 15px; border-radius: 8px; display: none; align-items: center; gap: 10px;
+            border: 1px solid var(--border-color); z-index: 5;
+        }
+        .attachment-preview i.fa-times { cursor: pointer; color: var(--danger); }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="screen active">
+        <div class="login-box">
+            <h2>P2P Nexus</h2>
+            <p>End-to-End Encrypted Messenger</p>
+            <div class="input-group">
+                <label>Your ID (Phone Number equivalent)</label>
+                <input type="text" id="my-id" placeholder="e.g. alice_123">
+            </div>
+            <div class="input-group">
+                <label>Your Master PIN</label>
+                <input type="password" id="my-pin" placeholder="Required for others to connect">
+            </div>
+            <button class="btn" onclick="login()">Log In</button>
+            <div id="login-error"></div>
+        </div>
+    </div>
+
+    <!-- MAIN APP SCREEN -->
+    <div id="app-screen" class="screen">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="header">
+                <div class="my-profile">
+                    <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                    <strong id="display-my-id">My ID</strong>
+                </div>
+                <div class="header-actions">
+                    <button onclick="openNewChatModal()" title="New Chat"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="chat-list" id="chat-list">
+                <!-- Chat items populated by JS -->
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <div class="no-chat-selected" id="no-chat-overlay">
+                <i class="fa-brands fa-whatsapp"></i>
+                <h2>P2P Nexus Web</h2>
+                <p>Send and receive messages without keeping your phone online.</p>
+                <p>Use the + button to start a direct connection.</p>
+            </div>
+
+            <div class="chat-header">
+                <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                <div class="chat-header-info">
+                    <h2 id="active-chat-name">Contact</h2>
+                    <p id="active-chat-status">Status</p>
+                </div>
+            </div>
+
+            <div class="messages-container" id="messages-container">
+                <!-- Messages populated by JS -->
+            </div>
+            
+            <div class="attachment-preview" id="attachment-preview">
+                <i class="fa-solid fa-file"></i>
+                <span id="attach-filename">file.jpg</span>
+                <i class="fa-solid fa-times" onclick="clearAttachment()"></i>
+            </div>
+
+            <div class="input-area">
+                <button class="btn-icon" onclick="document.getElementById('file-input').click()"><i class="fa-solid fa-paperclip"></i></button>
+                <input type="file" id="file-input" onchange="handleFileSelect(this)">
+                <div class="input-wrapper">
+                    <input type="text" id="msg-input" placeholder="Type a message" onkeypress="if(event.key==='Enter') sendMessage()">
+                </div>
+                <button class="btn-icon" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW CHAT MODAL -->
+    <div class="modal-overlay" id="new-chat-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>New Chat</h3>
+                <button class="close-modal" onclick="closeNewChatModal()"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Contact ID</label>
+                    <input type="text" id="contact-id" placeholder="Who do you want to message?">
+                </div>
+                <div class="input-group">
+                    <label>Contact PIN</label>
+                    <input type="password" id="contact-pin" placeholder="Their access PIN">
+                </div>
+                <button class="btn" onclick="initiateConnection()">Connect</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script>
+        // State
+        let myId = '';
+        let myPin = '';
+        let peer = null;
+        
+        let chats = {}; // contactId -> { conn, messages: [], status, unread }
+        let activeChatId = null;
+        let pendingFile = null;
+
+        // Login Logic
+        function login() {
+            myId = document.getElementById('my-id').value.trim();
+            myPin = document.getElementById('my-pin').value.trim();
+            if (!myId || !myPin) {
+                document.getElementById('login-error').innerText = "Both ID and PIN are required.";
+                return;
+            }
+            
+            document.getElementById('login-error').innerText = "Connecting to P2P network...";
+            
+            peer = new Peer(myId, { debug: 2 });
+            
+            peer.on('open', (id) => {
+                document.getElementById('login-screen').classList.remove('active');
+                document.getElementById('app-screen').classList.add('active');
+                document.getElementById('display-my-id').innerText = myId;
+                setupIncomingListener();
+            });
+            
+            peer.on('error', (err) => {
+                document.getElementById('login-error').innerText = err.message || "Failed to connect.";
+                if (err.type === 'unavailable-id') {
+                    document.getElementById('login-error').innerText = "ID already taken by someone online.";
+                }
+            });
+        }
+
+        // Incoming Connection Logic
+        function setupIncomingListener() {
+            peer.on('connection', (conn) => {
+                let authenticated = false;
+                
+                conn.on('data', (data) => {
+                    if (data.type === 'auth') {
+                        if (data.pin === myPin) {
+                            authenticated = true;
+                            conn.send({ type: 'auth_ack', success: true });
+                            registerChat(conn.peer, conn);
+                        } else {
+                            conn.send({ type: 'auth_ack', success: false, reason: 'Invalid PIN' });
+                            setTimeout(() => conn.close(), 500);
+                        }
+                    } else if (authenticated) {
+                        handleIncomingMessage(conn.peer, data);
+                    }
+                });
+                
+                conn.on('close', () => handleDisconnect(conn.peer));
+            });
+        }
+
+        // Outgoing Connection Logic
+        function initiateConnection() {
+            const targetId = document.getElementById('contact-id').value.trim();
+            const targetPin = document.getElementById('contact-pin').value.trim();
+            
+            if (!targetId || !targetPin) return;
+            if (targetId === myId) {
+                alert("Cannot connect to yourself."); return;
+            }
+            
+            closeNewChatModal();
+            
+            const conn = peer.connect(targetId, { reliable: true });
+            
+            conn.on('open', () => {
+                conn.send({ type: 'auth', pin: targetPin });
+            });
+            
+            conn.on('data', (data) => {
+                if (data.type === 'auth_ack') {
+                    if (data.success) {
+                        registerChat(targetId, conn);
+                        selectChat(targetId);
+                    } else {
+                        alert(`Connection to ${targetId} refused: Invalid PIN`);
+                        conn.close();
+                    }
+                } else {
+                    handleIncomingMessage(targetId, data);
+                }
+            });
+            
+            conn.on('close', () => handleDisconnect(targetId));
+            conn.on('error', (err) => alert("Connection error: " + err));
+        }
+
+        // Chat State Management
+        function registerChat(contactId, conn) {
+            if (!chats[contactId]) {
+                chats[contactId] = { conn: conn, messages: [], status: 'Online', unread: 0 };
+            } else {
+                chats[contactId].conn = conn;
+                chats[contactId].status = 'Online';
+            }
+            renderSidebar();
+            if (activeChatId === contactId) renderChatArea();
+        }
+        
+        function handleDisconnect(contactId) {
+            if (chats[contactId]) {
+                chats[contactId].status = 'Offline';
+                renderSidebar();
+                if (activeChatId === contactId) {
+                    document.getElementById('active-chat-status').innerText = 'Offline';
+                    document.getElementById('active-chat-status').style.color = 'var(--danger)';
+                }
+            }
+        }
+
+        function handleIncomingMessage(contactId, data) {
+            if (data.type === 'chat') {
+                const msg = {
+                    sender: 'them',
+                    text: data.text,
+                    media: data.media,
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                };
+                chats[contactId].messages.push(msg);
+                
+                if (activeChatId === contactId) {
+                    appendMessageUI(msg);
+                } else {
+                    chats[contactId].unread++;
+                }
+                renderSidebar(); // Update preview & badge
+            }
+        }
+
+        // UI Rendering
+        function renderSidebar() {
+            const list = document.getElementById('chat-list');
+            list.innerHTML = '';
+            
+            for (let id in chats) {
+                const chat = chats[id];
+                const lastMsg = chat.messages.length > 0 ? chat.messages[chat.messages.length - 1] : null;
+                let previewText = lastMsg ? (lastMsg.media ? '📁 Media attached' : lastMsg.text) : 'New conversation';
+                
+                const div = document.createElement('div');
+                div.className = `chat-item ${activeChatId === id ? 'active' : ''}`;
+                div.onclick = () => selectChat(id);
+                
+                div.innerHTML = `
+                    <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                    <div class="chat-info">
+                        <div style="display:flex; justify-content:space-between;">
+                            <div class="chat-name">${id}</div>
+                            ${lastMsg ? `<div class="time" style="color:var(--text-muted)">${lastMsg.time}</div>` : ''}
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <div class="chat-preview">${previewText}</div>
+                            <div style="display:flex; gap: 8px; align-items:center;">
+                                <div class="chat-status ${chat.status === 'Offline' ? 'disconnected' : ''}">${chat.status}</div>
+                                ${chat.unread > 0 ? `<div class="unread-badge">${chat.unread}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(div);
+            }
+        }
+
+        function selectChat(contactId) {
+            activeChatId = contactId;
+            chats[contactId].unread = 0;
+            document.getElementById('no-chat-overlay').style.display = 'none';
+            renderSidebar();
+            renderChatArea();
+        }
+
+        function renderChatArea() {
+            if (!activeChatId || !chats[activeChatId]) return;
+            const chat = chats[activeChatId];
+            
+            document.getElementById('active-chat-name').innerText = activeChatId;
+            const statusEl = document.getElementById('active-chat-status');
+            statusEl.innerText = chat.status;
+            statusEl.style.color = chat.status === 'Online' ? 'var(--accent)' : 'var(--danger)';
+            
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '';
+            chat.messages.forEach(msg => appendMessageUI(msg, false));
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendMessageUI(msg, scroll = true) {
+            const container = document.getElementById('messages-container');
+            const div = document.createElement('div');
+            div.className = `message ${msg.sender === 'me' ? 'out' : 'in'}`;
+            
+            let content = `<div class="bubble">`;
+            
+            if (msg.media) {
+                const url = URL.createObjectURL(new Blob([msg.media.blob], { type: msg.media.fileType }));
+                content += `<div class="media-container">`;
+                if (msg.media.fileType.startsWith('image/')) {
+                    content += `<img src="${url}">`;
+                } else if (msg.media.fileType.startsWith('video/')) {
+                    content += `<video controls src="${url}"></video>`;
+                } else if (msg.media.fileType.startsWith('audio/')) {
+                    content += `<audio controls src="${url}"></audio>`;
+                } else {
+                    content += `<a href="${url}" download="${msg.media.fileName}" style="color:var(--accent)"><i class="fa-solid fa-download"></i> ${msg.media.fileName}</a><br>`;
+                }
+                content += `</div>`;
+            }
+            
+            if (msg.text) {
+                content += `<span>${msg.text}</span>`;
+            }
+            
+            content += `<span class="time">${msg.time}</span></div>`;
+            div.innerHTML = content;
+            container.appendChild(div);
+            
+            if (scroll) container.scrollTop = container.scrollHeight;
+        }
+
+        // Messaging Action
+        function sendMessage() {
+            if (!activeChatId) return;
+            const chat = chats[activeChatId];
+            if (chat.status !== 'Online') {
+                alert('Cannot send message. Contact is offline.');
+                return;
+            }
+
+            const input = document.getElementById('msg-input');
+            const text = input.value.trim();
+            
+            if (!text && !pendingFile) return;
+
+            let mediaData = null;
+            if (pendingFile) {
+                mediaData = {
+                    fileName: pendingFile.name,
+                    fileType: pendingFile.type,
+                    blob: pendingFile
+                };
+            }
+
+            const msgObj = {
+                type: 'chat',
+                text: text,
+                media: mediaData
+            };
+
+            // Send via WebRTC
+            chat.conn.send(msgObj);
+
+            // Add locally
+            const localMsg = {
+                sender: 'me',
+                text: text,
+                media: mediaData,
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            };
+            chat.messages.push(localMsg);
+            
+            appendMessageUI(localMsg);
+            renderSidebar();
+            
+            input.value = '';
+            clearAttachment();
+        }
+
+        // Modals & Files
+        function openNewChatModal() { document.getElementById('new-chat-modal').classList.add('active'); }
+        function closeNewChatModal() { document.getElementById('new-chat-modal').classList.remove('active'); }
+        
+        function handleFileSelect(input) {
+            if (input.files && input.files[0]) {
+                pendingFile = input.files[0];
+                document.getElementById('attach-filename').innerText = pendingFile.name;
+                document.getElementById('attachment-preview').style.display = 'flex';
+            }
+        }
+        function clearAttachment() {
+            pendingFile = null;
+            document.getElementById('file-input').value = '';
+            document.getElementById('attachment-preview').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
