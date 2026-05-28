@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P2P Nexus — Private, Direct Messaging</title>
+  <meta name="description" content="Peer-to-peer messaging and file transfer. Your conversations never touch a server.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:   #0084ff;
+      --accent-d: #006fd6;
+      --text:     #0f172a;
+      --muted:    #64748b;
+      --border:   #e2e8f0;
+      --card-bg:  #f8fafc;
+      --white:    #ffffff;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--white);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── Nav ───────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1100px; margin: 0 auto;
+      padding: 0 24px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.1rem; font-weight: 700;
+      color: var(--text); text-decoration: none;
+    }
+    .logo-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--accent); display: flex; align-items: center;
+      justify-content: center; color: #fff; font-size: .85rem;
+    }
+    .btn-open {
+      padding: 8px 18px; border-radius: 8px;
+      background: var(--accent); color: #fff;
+      font-size: .875rem; font-weight: 600;
+      text-decoration: none; transition: background .15s, transform .12s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-open:hover { background: var(--accent-d); transform: translateY(-1px); }
+
+    /* ── Hero ──────────────────────────────────── */
+    .hero {
+      padding: 80px 24px 72px;
+      background: linear-gradient(160deg, #f0f7ff 0%, #ffffff 55%);
+    }
+    .hero-inner {
+      max-width: 680px; margin: 0 auto; text-align: center;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 6px 14px; border-radius: 20px;
+      background: #e8f0fe; color: var(--accent);
+      font-size: .8rem; font-weight: 600; margin-bottom: 28px;
+    }
+
+    h1 {
+      font-size: clamp(2.6rem, 7vw, 4rem);
+      font-weight: 800; line-height: 1.15;
+      letter-spacing: -.03em; margin-bottom: 20px;
+    }
+    .hero-sub {
+      font-size: 1.1rem; color: var(--muted);
+      max-width: 540px; margin: 0 auto 32px; line-height: 1.7;
+    }
+    .cta-btn {
+      display: inline-flex; align-items: center; gap: 9px;
+      padding: 15px 32px; border-radius: 12px;
+      background: var(--accent); color: #fff;
+      font-size: 1.05rem; font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 4px 20px rgba(0,132,255,.35);
+      transition: background .15s, transform .12s, box-shadow .15s;
+    }
+    .cta-btn:hover {
+      background: var(--accent-d); transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(0,132,255,.4);
+    }
+    .cta-btn:active { transform: translateY(0); }
+
+    .hero-note {
+      margin-top: 16px; font-size: .82rem; color: var(--muted);
+    }
+
+    /* ── P2P diagram ───────────────────────────── */
+    .diagram-wrap {
+      margin-top: 60px; display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
+    }
+    .diagram {
+      display: flex; align-items: center; gap: 0;
+      position: relative;
+    }
+    .device {
+      width: 80px; height: 56px; border-radius: 12px;
+      background: var(--white); border: 2px solid var(--border);
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 4px; font-size: .65rem;
+      color: var(--muted); font-weight: 600; letter-spacing: .03em;
+    }
+    .device i { font-size: 1.3rem; color: var(--accent); }
+    .conn-line {
+      position: relative; width: 120px; height: 2px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .conn-line::before {
+      content: ''; position: absolute;
+      left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--accent), #00c9ff);
+      border-radius: 2px;
+    }
+    .conn-label {
+      position: absolute; top: -26px; left: 50%; transform: translateX(-50%);
+      white-space: nowrap; font-size: .7rem; color: var(--accent);
+      font-weight: 600; background: #e8f0fe; padding: 2px 8px; border-radius: 10px;
+    }
+    .no-server {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 4px; color: #94a3b8; font-size: .68rem; font-weight: 600;
+      letter-spacing: .04em; text-transform: uppercase;
+    }
+    .no-server i { font-size: 1.6rem; color: #cbd5e1; }
+    .strike-wrap { position: relative; }
+    .strike-wrap::after {
+      content: ''; position: absolute;
+      left: -4px; right: -4px; top: 50%; height: 2px;
+      background: #ef4444; transform: rotate(-12deg); border-radius: 2px;
+    }
+    .diagram-caption {
+      font-size: .78rem; color: var(--muted); letter-spacing: .01em;
+    }
+
+    /* ── Features ──────────────────────────────── */
+    .features {
+      padding: 72px 24px;
+      background: var(--card-bg);
+      border-top: 1px solid var(--border);
+    }
+    .features-inner {
+      max-width: 1000px; margin: 0 auto;
+    }
+    .section-label {
+      text-align: center; font-size: .78rem; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 12px;
+    }
+    .section-title {
+      text-align: center; font-size: 1.9rem; font-weight: 700;
+      margin-bottom: 48px; letter-spacing: -.02em;
+    }
+    .cards {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+    }
+    .card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 16px; padding: 28px 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.05);
+      transition: box-shadow .2s, transform .18s;
+    }
+    .card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.08); transform: translateY(-2px); }
+    .card-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: #e8f0fe; display: flex; align-items: center;
+      justify-content: center; font-size: 1.3rem; color: var(--accent);
+      margin-bottom: 16px;
+    }
+    .card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+    .card p  { font-size: .9rem; color: var(--muted); line-height: 1.65; }
+
+    /* ── Trust bar ─────────────────────────────── */
+    .trust {
+      padding: 36px 24px;
+      background: var(--text);
+      color: #e2e8f0;
+    }
+    .trust-inner {
+      max-width: 900px; margin: 0 auto;
+      display: flex; flex-wrap: wrap; align-items: center;
+      justify-content: center; gap: 32px;
+    }
+    .trust-item {
+      display: flex; align-items: center; gap: 10px;
+      font-size: .88rem; font-weight: 500;
+    }
+    .trust-item i { color: var(--accent); font-size: 1rem; }
+
+    /* ── CTA bottom ────────────────────────────── */
+    .cta-section {
+      padding: 80px 24px; text-align: center;
+      background: var(--white);
+    }
+    .cta-section h2 {
+      font-size: 2rem; font-weight: 800; margin-bottom: 12px; letter-spacing: -.02em;
+    }
+    .cta-section p { color: var(--muted); margin-bottom: 32px; font-size: 1rem; }
+
+    /* ── Footer ────────────────────────────────── */
+    footer {
+      padding: 20px 24px; text-align: center;
+      border-top: 1px solid var(--border);
+      font-size: .8rem; color: var(--muted);
+    }
+
+    /* ── Responsive ────────────────────────────── */
+    @media (max-width: 600px) {
+      h1 { font-size: 2.4rem; }
+      .conn-line { width: 60px; }
+      .conn-label { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="/">
+      <span class="logo-icon"><i class="fa-solid fa-bolt"></i></span>
+      P2P Nexus
+    </a>
+    <a class="btn-open" href="/app.html">
+      Open App <i class="fa-solid fa-arrow-right"></i>
+    </a>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="badge">
+      <i class="fa-solid fa-shield-halved"></i> 100% peer-to-peer · no account needed
+    </div>
+
+    <h1>Private. Direct.<br>No servers.</h1>
+
+    <p class="hero-sub">
+      Peer-to-peer messaging and file transfer that never touches a server.
+      Your conversations are impossible to intercept — because they never leave your devices.
+    </p>
+
+    <a href="/app.html" class="cta-btn">
+      Try it live <i class="fa-solid fa-arrow-right"></i>
+    </a>
+    <p class="hero-note">No sign-up &nbsp;·&nbsp; No download &nbsp;·&nbsp; Works in any modern browser</p>
+
+    <div class="diagram-wrap">
+      <div class="diagram">
+        <div class="device">
+          <i class="fa-solid fa-laptop"></i>
+          DEVICE A
+        </div>
+        <div class="conn-line">
+          <span class="conn-label">direct P2P</span>
+        </div>
+        <div class="device">
+          <i class="fa-solid fa-laptop"></i>
+          DEVICE B
+        </div>
+      </div>
+      <div style="margin-top:20px">
+        <div class="no-server">
+          <div class="strike-wrap">
+            <i class="fa-solid fa-server"></i>
+          </div>
+          server bypassed
+        </div>
+      </div>
+      <p class="diagram-caption" style="margin-top:10px">Data travels directly between devices — we physically cannot see it</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ── -->
+<section class="features">
+  <div class="features-inner">
+    <p class="section-label">Why P2P Nexus</p>
+    <h2 class="section-title">Built for privacy from the ground up</h2>
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-icon"><i class="fa-solid fa-eye-slash"></i></div>
+        <h3>Zero server data</h3>
+        <p>
+          Messages and files flow directly between peers using WebRTC.
+          Nothing is stored, logged, or routed through any server.
+          We <em>can't</em> read your conversations even if we wanted to.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon"><i class="fa-solid fa-file-arrow-up"></i></div>
+        <h3>Direct file transfer</h3>
+        <p>
+          Send documents, images, and files peer-to-peer.
+          No cloud upload. No size limits imposed by a middleman server.
+          Files go straight from your device to theirs.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon"><i class="fa-solid fa-users"></i></div>
+        <h3>Group rooms, full mesh</h3>
+        <p>
+          Up to 5 participants per room, all directly connected to each other.
+          Full mesh topology — every participant talks to every other participant
+          with no central hub.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── Trust bar ── -->
+<div class="trust">
+  <div class="trust-inner">
+    <div class="trust-item">
+      <i class="fa-solid fa-lock"></i>
+      WebRTC DTLS encryption
+    </div>
+    <div class="trust-item">
+      <i class="fa-solid fa-server"></i>
+      Signaling server sees zero content
+    </div>
+    <div class="trust-item">
+      <i class="fa-solid fa-database"></i>
+      No data stored anywhere
+    </div>
+    <div class="trust-item">
+      <i class="fa-solid fa-user-slash"></i>
+      No account or login required
+    </div>
+  </div>
+</div>
+
+<!-- ── Bottom CTA ── -->
+<section class="cta-section">
+  <h2>Ready to try it?</h2>
+  <p>Open the app, share a Room ID, and start a private conversation in seconds.</p>
+  <a href="/app.html" class="cta-btn">
+    Launch P2P Nexus <i class="fa-solid fa-arrow-right"></i>
+  </a>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  P2P Nexus &nbsp;·&nbsp; Built on WebRTC &nbsp;·&nbsp; Open Room, Zero Trace
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Nexus</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ── Theme tokens ── */
+        :root,
+        [data-theme="light"] {
+            --bg-root:      #f0f2f5;
+            --bg-panel:     #ffffff;
+            --bg-header:    #ffffff;
+            --bg-input:     #f0f2f5;
+            --bg-hover:     #f7f8fa;
+            --bg-active:    #e8f0fe;
+            --text-main:    #1c1e21;
+            --text-muted:   #65676b;
+            --text-sub:     #8e9297;
+            --border:       #e4e6ea;
+            --msg-in:       #e9eaeb;
+            --msg-in-text:  #1c1e21;
+            --msg-out:      #0084ff;
+            --msg-out-text: #ffffff;
+            --accent:       #0084ff;
+            --accent-soft:  #e8f0fe;
+            --danger:       #e41749;
+            --shadow-sm:    0 1px 3px rgba(0,0,0,.08);
+            --shadow-md:    0 4px 16px rgba(0,0,0,.10);
+            --shadow-lg:    0 8px 32px rgba(0,0,0,.12);
+            --online:       #31a24c;
+            --radius:       12px;
+            --sidebar-w:    340px;
+            --theme-icon:   "☀️";
+        }
+
+        [data-theme="dark"] {
+            --bg-root:      #0b141a;
+            --bg-panel:     #111b21;
+            --bg-header:    #202c33;
+            --bg-input:     #2a3942;
+            --bg-hover:     #182229;
+            --bg-active:    #2a3942;
+            --text-main:    #e9edef;
+            --text-muted:   #8696a0;
+            --text-sub:     #667781;
+            --border:       #222d34;
+            --msg-in:       #202c33;
+            --msg-in-text:  #e9edef;
+            --msg-out:      #005c4b;
+            --msg-out-text: #e9edef;
+            --accent:       #00a884;
+            --accent-soft:  #1a3a33;
+            --danger:       #f15c6d;
+            --shadow-sm:    0 1px 3px rgba(0,0,0,.3);
+            --shadow-md:    0 4px 16px rgba(0,0,0,.4);
+            --shadow-lg:    0 8px 32px rgba(0,0,0,.5);
+            --online:       #00a884;
+        }
+
+        /* ── Reset ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg-root);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: background 0.25s, color 0.25s;
+        }
+
+        .screen { display: none; width: 100%; height: 100%; }
+        .screen.active { display: flex; }
+
+        /* ── Theme toggle (always visible top-right) ── */
+        #theme-toggle {
+            position: fixed; top: 14px; right: 18px; z-index: 200;
+            background: var(--bg-panel); border: 1px solid var(--border);
+            color: var(--text-muted); width: 38px; height: 38px;
+            border-radius: 50%; cursor: pointer; font-size: 1rem;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--shadow-sm);
+            transition: background 0.2s, color 0.2s, border 0.2s, transform 0.15s;
+        }
+        #theme-toggle:hover { color: var(--accent); transform: scale(1.08); }
+
+        /* ─────────────────────────────────────────
+           LOGIN SCREEN
+        ───────────────────────────────────────── */
+        #login-screen {
+            justify-content: center; align-items: center;
+            background: var(--bg-root);
+        }
+
+        .login-card {
+            background: var(--bg-panel);
+            border-radius: 20px;
+            padding: 44px 40px 36px;
+            width: 100%; max-width: 420px;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+        }
+
+        .login-logo {
+            width: 64px; height: 64px; border-radius: 18px;
+            background: var(--accent); display: flex; align-items: center;
+            justify-content: center; margin: 0 auto 20px;
+            font-size: 1.8rem; color: #fff;
+            box-shadow: 0 4px 16px rgba(0,132,255,.35);
+        }
+        [data-theme="dark"] .login-logo { box-shadow: 0 4px 16px rgba(0,168,132,.35); }
+
+        .login-card h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; }
+        .login-card > p { color: var(--text-muted); margin-bottom: 28px; font-size: 0.92rem; }
+
+        .field { margin-bottom: 16px; text-align: left; }
+        .field label { display: block; margin-bottom: 6px; font-size: 0.82rem; font-weight: 600; color: var(--text-muted); letter-spacing: .03em; text-transform: uppercase; }
+        .field input {
+            width: 100%; padding: 12px 14px;
+            background: var(--bg-input); border: 1.5px solid var(--border);
+            border-radius: 10px; color: var(--text-main); font-size: 0.97rem;
+            font-family: inherit; transition: border-color 0.18s, box-shadow 0.18s;
+        }
+        .field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,132,255,.15); }
+        [data-theme="dark"] .field input:focus { box-shadow: 0 0 0 3px rgba(0,168,132,.15); }
+
+        .btn-primary {
+            width: 100%; padding: 13px; margin-top: 6px;
+            background: var(--accent); color: #fff; border: none;
+            border-radius: 10px; font-size: 1rem; font-weight: 600;
+            cursor: pointer; font-family: inherit;
+            transition: filter 0.15s, transform 0.12s;
+            box-shadow: 0 2px 10px rgba(0,132,255,.3);
+        }
+        [data-theme="dark"] .btn-primary { box-shadow: 0 2px 10px rgba(0,168,132,.3); }
+        .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0); }
+
+        #login-status {
+            margin-top: 14px; font-size: 0.88rem;
+            color: var(--text-muted); min-height: 20px;
+        }
+        #login-status.error { color: var(--danger); }
+
+        /* ─────────────────────────────────────────
+           APP LAYOUT
+        ───────────────────────────────────────── */
+        #app-screen { display: none; flex-direction: row; }
+        #app-screen.active { display: flex; }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: var(--sidebar-w); flex-shrink: 0;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            transition: background 0.25s, border 0.25s;
+        }
+
+        .sidebar-header {
+            height: 64px; padding: 0 16px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-header);
+        }
+
+        .me-pill {
+            display: flex; align-items: center; gap: 10px; min-width: 0;
+        }
+        .me-pill strong {
+            font-size: 0.97rem; overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap; max-width: 140px;
+        }
+
+        .avatar {
+            width: 38px; height: 38px; border-radius: 50%;
+            background: var(--bg-input); border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; color: var(--text-muted); flex-shrink: 0;
+            position: relative; transition: border-color 0.2s;
+        }
+        .avatar.online { border-color: var(--online); }
+        .avatar.online::after {
+            content: ''; position: absolute; bottom: 1px; right: 1px;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--online); border: 2px solid var(--bg-panel);
+        }
+
+        .room-pill {
+            margin: 8px 14px; padding: 6px 12px;
+            background: var(--accent-soft); border-radius: 20px;
+            font-size: 0.78rem; color: var(--accent); font-weight: 600;
+            display: flex; align-items: center; gap: 6px; justify-content: center;
+        }
+        .room-pill i { font-size: 0.7rem; }
+
+        .peer-list { flex: 1; overflow-y: auto; }
+        .peer-list-empty {
+            padding: 40px 20px; text-align: center;
+            color: var(--text-muted); font-size: 0.9rem; line-height: 1.6;
+        }
+        .peer-list-empty i { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.35; display: block; }
+
+        .peer-item {
+            display: flex; align-items: center; padding: 10px 16px;
+            cursor: pointer; gap: 12px;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.12s;
+        }
+        .peer-item:hover { background: var(--bg-hover); }
+        .peer-item.active { background: var(--bg-active); }
+
+        .peer-info { flex: 1; overflow: hidden; }
+        .peer-name { font-size: 0.95rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 2px; }
+        .peer-preview { font-size: 0.8rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .peer-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+        .peer-time { font-size: 0.7rem; color: var(--text-sub); }
+        .unread-dot {
+            background: var(--accent); color: #fff;
+            font-size: 0.68rem; font-weight: 700;
+            min-width: 18px; height: 18px; padding: 0 4px;
+            border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        }
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--online); }
+        .status-dot.offline { background: var(--danger); }
+
+        /* ── Chat area ── */
+        .chat-area {
+            flex: 1; display: flex; flex-direction: column;
+            background: var(--bg-root); position: relative; min-width: 0;
+        }
+
+        /* Empty state */
+        .no-chat-overlay {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 12px;
+            background: var(--bg-root); z-index: 10; text-align: center; padding: 20px;
+        }
+        .no-chat-icon {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: var(--accent-soft);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; color: var(--accent); margin-bottom: 8px;
+        }
+        .no-chat-overlay h2 { font-size: 1.2rem; font-weight: 600; }
+        .no-chat-overlay p { color: var(--text-muted); font-size: 0.9rem; max-width: 260px; }
+
+        /* Chat header */
+        .chat-top {
+            height: 64px; background: var(--bg-header);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 16px; gap: 14px;
+            flex-shrink: 0; box-shadow: var(--shadow-sm);
+        }
+        .chat-top-info h2 { font-size: 0.97rem; font-weight: 600; }
+        .chat-top-info p { font-size: 0.78rem; color: var(--text-muted); }
+        .chat-top-info p.online { color: var(--online); }
+        .chat-top-info p.offline { color: var(--danger); }
+
+        /* ICE status bar */
+        #ice-bar {
+            display: none; padding: 6px 16px; text-align: center;
+            font-size: 0.78rem; color: var(--accent);
+            background: var(--accent-soft); border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        #ice-bar.visible { display: block; }
+
+        /* Messages */
+        .messages-area {
+            flex: 1; overflow-y: auto;
+            padding: 16px 12px; display: flex; flex-direction: column; gap: 4px;
+            background: var(--bg-root);
+        }
+
+        /* Light theme chat wallpaper — subtle dot grid */
+        [data-theme="light"] .messages-area {
+            background-image: radial-gradient(circle, #d0d3d9 1px, transparent 1px);
+            background-size: 24px 24px;
+            background-color: #eae9e1;
+        }
+        [data-theme="dark"] .messages-area {
+            background-color: #0b141a;
+            background-image: none;
+        }
+
+        .message { max-width: 68%; display: flex; flex-direction: column; }
+        .message.out { align-self: flex-end; align-items: flex-end; }
+        .message.in  { align-self: flex-start; align-items: flex-start; }
+
+        .bubble {
+            padding: 8px 12px 5px; border-radius: 16px;
+            font-size: 0.93rem; line-height: 1.5; word-wrap: break-word;
+            box-shadow: var(--shadow-sm);
+            max-width: 100%;
+        }
+        .message.out .bubble {
+            background: var(--msg-out); color: var(--msg-out-text);
+            border-bottom-right-radius: 4px;
+        }
+        .message.in .bubble {
+            background: var(--msg-in); color: var(--msg-in-text);
+            border-bottom-left-radius: 4px;
+        }
+        .bubble-footer { display: flex; align-items: center; gap: 4px; margin-top: 3px; }
+        .msg-time { font-size: 0.64rem; }
+        .message.out .msg-time { color: rgba(255,255,255,.65); }
+        .message.in .msg-time  { color: var(--text-sub); }
+
+        .media-wrap { margin-bottom: 4px; border-radius: 10px; overflow: hidden; max-width: 260px; }
+        .media-wrap img, .media-wrap video { display: block; max-width: 100%; border-radius: 10px; }
+        .file-link { color: inherit; opacity: 0.9; font-size: 0.85rem; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+        .file-link:hover { opacity: 1; text-decoration: underline; }
+
+        /* System messages */
+        .sys-msg {
+            align-self: center;
+            background: rgba(0,0,0,.08); color: var(--text-muted);
+            padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; margin: 4px 0;
+        }
+        [data-theme="dark"] .sys-msg { background: rgba(255,255,255,.08); }
+
+        /* Input area */
+        .input-row {
+            display: none; align-items: flex-end; padding: 10px 14px; gap: 10px;
+            background: var(--bg-panel); border-top: 1px solid var(--border);
+            flex-shrink: 0; box-shadow: 0 -2px 8px rgba(0,0,0,.05);
+        }
+        .input-row.visible { display: flex; }
+
+        .attach-preview-bar {
+            display: none; align-items: center; gap: 10px; padding: 8px 14px;
+            background: var(--bg-input); border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .attach-preview-bar.visible { display: flex; }
+        .attach-name { font-size: 0.82rem; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+        .attach-remove { background: none; border: none; cursor: pointer; color: var(--danger); font-size: 1rem; padding: 2px 6px; }
+
+        .input-box {
+            flex: 1; background: var(--bg-input); border-radius: 22px;
+            padding: 10px 16px; display: flex; align-items: center;
+            border: 1.5px solid transparent; transition: border-color 0.18s;
+        }
+        .input-box:focus-within { border-color: var(--accent); }
+        .input-box input {
+            flex: 1; background: none; border: none; outline: none;
+            color: var(--text-main); font-size: 0.95rem; font-family: inherit;
+        }
+        .input-box input::placeholder { color: var(--text-sub); }
+
+        .icon-btn {
+            background: none; border: none; cursor: pointer;
+            color: var(--text-muted); font-size: 1.25rem; padding: 7px;
+            border-radius: 50%; transition: background 0.15s, color 0.15s;
+            flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+            width: 38px; height: 38px;
+        }
+        .icon-btn:hover { background: var(--bg-hover); color: var(--accent); }
+
+        .send-btn {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: var(--accent); border: none; cursor: pointer;
+            color: #fff; font-size: 1rem; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: filter 0.15s, transform 0.12s;
+            box-shadow: 0 2px 8px rgba(0,132,255,.3);
+        }
+        [data-theme="dark"] .send-btn { box-shadow: 0 2px 8px rgba(0,168,132,.3); }
+        .send-btn:hover { filter: brightness(1.1); transform: scale(1.06); }
+        .send-btn:active { transform: scale(0.97); }
+
+        #file-input { display: none; }
+
+        /* ── Phase 4: Room group-chat item ── */
+        .peer-item.room-item { border-bottom: 2px solid var(--border); background: var(--bg-hover); }
+        .peer-item.room-item.active, .peer-item.room-item:hover { background: var(--bg-active); }
+        .avatar.group { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+
+        /* ── File transfer bubble ── */
+        .file-xfer { display: flex; flex-direction: column; gap: 6px; min-width: 180px; }
+        .file-xfer-name {
+            font-size: 0.82rem; font-weight: 600;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .file-xfer-bar-wrap {
+            height: 4px; background: rgba(255,255,255,.28); border-radius: 2px; overflow: hidden;
+        }
+        .message.in .file-xfer-bar-wrap { background: rgba(0,0,0,.12); }
+        .file-xfer-bar {
+            height: 100%; background: currentColor; opacity: 0.75;
+            width: 0%; border-radius: 2px; transition: width 0.18s;
+        }
+        .file-xfer-status { font-size: 0.72rem; opacity: 0.7; }
+        .file-xfer-link {
+            color: inherit; opacity: 0.9; font-size: 0.85rem;
+            text-decoration: none; display: flex; align-items: center; gap: 7px;
+        }
+        .file-xfer-link:hover { opacity: 1; text-decoration: underline; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+
+        /* Transitions */
+        .sidebar, .chat-area, .chat-top, .sidebar-header,
+        .input-row, .login-card, .field input, .peer-item { transition: background 0.2s, border-color 0.2s, color 0.2s; }
+
+        /* Responsive — collapse sidebar on small screens */
+        @media (max-width: 600px) {
+            .sidebar { width: 100%; max-width: none; position: absolute; z-index: 50; height: 100%; }
+            .sidebar.hidden { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Theme toggle — always visible -->
+<button id="theme-toggle" onclick="toggleTheme()" title="Toggle light / dark mode">
+    <i class="fa-solid fa-moon" id="theme-icon"></i>
+</button>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="login-screen" class="screen active">
+    <div class="login-card">
+        <div class="login-logo"><i class="fa-solid fa-bolt"></i></div>
+        <h1>P2P Nexus</h1>
+        <p>Direct peer-to-peer encrypted messaging</p>
+
+        <div class="field">
+            <label>Your Name</label>
+            <input type="text" id="my-name" placeholder="e.g. alice" autocomplete="off" autofocus>
+        </div>
+        <div class="field">
+            <label>Room ID</label>
+            <input type="text" id="room-id" placeholder="e.g. team-alpha"
+                onkeydown="if(event.key==='Enter') joinRoom()">
+        </div>
+
+        <button class="btn-primary" id="join-btn" onclick="this.disabled=true;this.textContent='Connecting…';joinRoom()">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> &nbsp;Join Room
+        </button>
+        <div id="login-status"></div>
+    </div>
+</div>
+
+<!-- ── MAIN APP ── -->
+<div id="app-screen" class="screen">
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="me-pill">
+                <div class="avatar online"><i class="fa-solid fa-user"></i></div>
+                <strong id="display-my-name">Me</strong>
+            </div>
+        </div>
+
+        <div class="room-pill">
+            <i class="fa-solid fa-hashtag"></i>
+            <span id="display-room-id">—</span>
+        </div>
+
+        <div class="peer-list" id="peer-list">
+            <div class="peer-list-empty" id="peer-list-empty">
+                <i class="fa-solid fa-satellite-dish"></i>
+                Waiting for peers to join the room…<br>
+                <small style="opacity:.6">Share the Room ID above</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat area -->
+    <div class="chat-area">
+
+        <!-- No chat selected overlay -->
+        <div class="no-chat-overlay" id="no-chat-overlay">
+            <div class="no-chat-icon"><i class="fa-solid fa-comments"></i></div>
+            <h2>P2P Nexus</h2>
+            <p>Click a peer on the left to start a direct, encrypted conversation.</p>
+            <p style="font-size:.8rem; margin-top:4px; color:var(--text-sub)">
+                No messages pass through any server.
+            </p>
+        </div>
+
+        <!-- Chat header -->
+        <div class="chat-top" id="chat-top" style="display:none">
+            <div class="avatar" id="chat-top-avatar"><i class="fa-solid fa-user"></i></div>
+            <div class="chat-top-info">
+                <h2 id="active-peer-name">Peer</h2>
+                <p id="active-peer-status">Connecting…</p>
+            </div>
+        </div>
+
+        <!-- ICE status -->
+        <div id="ice-bar"><i class="fa-solid fa-circle-notch fa-spin"></i> &nbsp;Establishing direct connection…</div>
+
+        <!-- Messages -->
+        <div class="messages-area" id="messages-area"></div>
+
+        <!-- Attachment preview -->
+        <div class="attach-preview-bar" id="attach-bar">
+            <i class="fa-solid fa-paperclip" style="color:var(--accent)"></i>
+            <span class="attach-name" id="attach-name"></span>
+            <button class="attach-remove" onclick="clearAttachment()" title="Remove">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Input row -->
+        <div class="input-row" id="input-row">
+            <button class="icon-btn" onclick="document.getElementById('file-input').click()" title="Attach file">
+                <i class="fa-solid fa-paperclip"></i>
+            </button>
+            <input type="file" id="file-input" onchange="handleFileSelect(this)">
+
+            <div class="input-box">
+                <input type="text" id="msg-input" placeholder="Type a message…"
+                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.sendMessage();}">
+            </div>
+
+            <button class="send-btn" onclick="window.sendMessage()" title="Send">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Scripts (M5: extracted to src/app.js) ── -->
+<script type="module" src="./src/app.js"></script>
+<!-- Phase 2 debug panel — toggle with Ctrl+D -->
+<div id="dbg-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;height:200px;background:#1a1a1a;border-top:2px solid #00a884;z-index:999;font-family:monospace;font-size:11px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 10px;background:#111;color:#8696a0;">
+        <span style="color:#00a884;font-weight:bold;">Phase 2 Debug Console</span>
+        <button onclick="toggleDebug()" style="background:none;border:none;color:#8696a0;cursor:pointer;font-size:1rem;">✕</button>
+    </div>
+    <pre id="dbg-output" style="margin:0;padding:8px 10px;color:#e9edef;height:164px;overflow-y:auto;white-space:pre-wrap;"></pre>
+</div>
+<script>
+// Ctrl+D toggles the debug panel
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'd') { e.preventDefault(); window.toggleDebug && window.toggleDebug(); }
+});
+</script>
+</body>
+</html>

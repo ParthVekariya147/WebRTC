@@ -1,0 +1,14 @@
+{
+  "name": "webrtc-p2p-server",
+  "version": "1.0.0",
+  "description": "WebRTC P2P signaling server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --experimental-vm-modules ../../node_modules/.bin/vitest run server.test.js"
+  },
+  "dependencies": {
+    "ws": "^8.17.1"
+  }
+}

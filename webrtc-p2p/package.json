@@ -1,0 +1,14 @@
+{
+  "name": "webrtc-p2p",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:unit:server": "cd server && npx vitest@1.6.0 run",
+    "test:unit:client": "cd client && node_modules/.bin/vitest run",
+    "test:all": "npm run test:unit:server && npm run test:unit:client"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0"
+  }
+}
