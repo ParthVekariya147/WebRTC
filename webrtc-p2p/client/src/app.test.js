@@ -1,7 +1,7 @@
 // app.test.js — tests for pure helpers exported from app.js
 // Focus: esc() XSS prevention (L1 treated as security fix)
 import { describe, it, expect } from 'vitest';
-import { esc, fmt } from './app.js';
+import { esc, fmt, fileCategory, fmtSize } from './app.js';
 
 // ── esc() — XSS prevention ─────────────────────────────────────────────────
 
@@ -106,6 +106,75 @@ describe('esc() — HTML escaping / XSS prevention', () => {
     it('coerces non-string inputs to string before escaping', () => {
         expect(esc(42)).toBe('42');
         expect(esc(true)).toBe('true');
+    });
+});
+
+// ── fileCategory() ─────────────────────────────────────────────────────────
+
+describe('fileCategory() — file type detection', () => {
+    it('detects image types', () => {
+        expect(fileCategory('image/png')).toBe('image');
+        expect(fileCategory('image/jpeg')).toBe('image');
+        expect(fileCategory('image/gif')).toBe('image');
+        expect(fileCategory('image/webp')).toBe('image');
+    });
+
+    it('detects video types', () => {
+        expect(fileCategory('video/mp4')).toBe('video');
+        expect(fileCategory('video/webm')).toBe('video');
+        expect(fileCategory('video/quicktime')).toBe('video');
+    });
+
+    it('detects audio types', () => {
+        expect(fileCategory('audio/mpeg')).toBe('audio');
+        expect(fileCategory('audio/wav')).toBe('audio');
+    });
+
+    it('detects PDF by mime type', () => {
+        expect(fileCategory('application/pdf')).toBe('pdf');
+    });
+
+    it('detects PDF by filename extension when mime is generic', () => {
+        expect(fileCategory('application/octet-stream', 'report.pdf')).toBe('pdf');
+        expect(fileCategory('', 'document.PDF')).toBe('pdf');
+    });
+
+    it('returns other for unknown types', () => {
+        expect(fileCategory('application/zip')).toBe('other');
+        expect(fileCategory('text/plain')).toBe('other');
+        expect(fileCategory('', 'archive.zip')).toBe('other');
+    });
+
+    it('returns other for empty inputs', () => {
+        expect(fileCategory()).toBe('other');
+        expect(fileCategory('', '')).toBe('other');
+    });
+});
+
+// ── fmtSize() ──────────────────────────────────────────────────────────────
+
+describe('fmtSize() — byte size formatting', () => {
+    it('formats bytes', () => {
+        expect(fmtSize(0)).toBe('0 B');
+        expect(fmtSize(512)).toBe('512 B');
+        expect(fmtSize(1023)).toBe('1023 B');
+    });
+
+    it('formats kilobytes', () => {
+        expect(fmtSize(1024)).toBe('1.0 KB');
+        expect(fmtSize(1536)).toBe('1.5 KB');
+        expect(fmtSize(1024 * 999)).toBe('999.0 KB');
+    });
+
+    it('formats megabytes', () => {
+        expect(fmtSize(1024 * 1024)).toBe('1.0 MB');
+        expect(fmtSize(1024 * 1024 * 50)).toBe('50.0 MB');
+        expect(fmtSize(1024 * 1024 * 100)).toBe('100.0 MB');
+    });
+
+    it('formats gigabytes', () => {
+        expect(fmtSize(1024 * 1024 * 1024)).toBe('1.00 GB');
+        expect(fmtSize(1024 * 1024 * 1024 * 2.5)).toBe('2.50 GB');
     });
 });
 

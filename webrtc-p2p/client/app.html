@@ -33,7 +33,6 @@
             --online:       #31a24c;
             --radius:       12px;
             --sidebar-w:    340px;
-            --theme-icon:   "☀️";
         }
 
         [data-theme="dark"] {
@@ -60,7 +59,6 @@
             --online:       #00a884;
         }
 
-        /* ── Reset ── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
@@ -78,7 +76,6 @@
         .screen { display: none; width: 100%; height: 100%; }
         .screen.active { display: flex; }
 
-        /* ── Theme toggle (always visible top-right) ── */
         #theme-toggle {
             position: fixed; top: 14px; right: 18px; z-index: 200;
             background: var(--bg-panel); border: 1px solid var(--border);
@@ -90,13 +87,8 @@
         }
         #theme-toggle:hover { color: var(--accent); transform: scale(1.08); }
 
-        /* ─────────────────────────────────────────
-           LOGIN SCREEN
-        ───────────────────────────────────────── */
-        #login-screen {
-            justify-content: center; align-items: center;
-            background: var(--bg-root);
-        }
+        /* ── Login ── */
+        #login-screen { justify-content: center; align-items: center; background: var(--bg-root); }
 
         .login-card {
             background: var(--bg-panel);
@@ -115,7 +107,6 @@
             box-shadow: 0 4px 16px rgba(0,132,255,.35);
         }
         [data-theme="dark"] .login-logo { box-shadow: 0 4px 16px rgba(0,168,132,.35); }
-
         .login-card h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; }
         .login-card > p { color: var(--text-muted); margin-bottom: 28px; font-size: 0.92rem; }
 
@@ -142,19 +133,13 @@
         .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
         .btn-primary:active { transform: translateY(0); }
 
-        #login-status {
-            margin-top: 14px; font-size: 0.88rem;
-            color: var(--text-muted); min-height: 20px;
-        }
+        #login-status { margin-top: 14px; font-size: 0.88rem; color: var(--text-muted); min-height: 20px; }
         #login-status.error { color: var(--danger); }
 
-        /* ─────────────────────────────────────────
-           APP LAYOUT
-        ───────────────────────────────────────── */
+        /* ── App layout ── */
         #app-screen { display: none; flex-direction: row; }
         #app-screen.active { display: flex; }
 
-        /* ── Sidebar ── */
         .sidebar {
             width: var(--sidebar-w); flex-shrink: 0;
             background: var(--bg-panel);
@@ -170,13 +155,8 @@
             background: var(--bg-header);
         }
 
-        .me-pill {
-            display: flex; align-items: center; gap: 10px; min-width: 0;
-        }
-        .me-pill strong {
-            font-size: 0.97rem; overflow: hidden; text-overflow: ellipsis;
-            white-space: nowrap; max-width: 140px;
-        }
+        .me-pill { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .me-pill strong { font-size: 0.97rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
 
         .avatar {
             width: 38px; height: 38px; border-radius: 50%;
@@ -201,10 +181,7 @@
         .room-pill i { font-size: 0.7rem; }
 
         .peer-list { flex: 1; overflow-y: auto; }
-        .peer-list-empty {
-            padding: 40px 20px; text-align: center;
-            color: var(--text-muted); font-size: 0.9rem; line-height: 1.6;
-        }
+        .peer-list-empty { padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
         .peer-list-empty i { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.35; display: block; }
 
         .peer-item {
@@ -237,7 +214,6 @@
             background: var(--bg-root); position: relative; min-width: 0;
         }
 
-        /* Empty state */
         .no-chat-overlay {
             position: absolute; inset: 0;
             display: flex; flex-direction: column;
@@ -253,7 +229,6 @@
         .no-chat-overlay h2 { font-size: 1.2rem; font-weight: 600; }
         .no-chat-overlay p { color: var(--text-muted); font-size: 0.9rem; max-width: 260px; }
 
-        /* Chat header */
         .chat-top {
             height: 64px; background: var(--bg-header);
             border-bottom: 1px solid var(--border);
@@ -265,7 +240,6 @@
         .chat-top-info p.online { color: var(--online); }
         .chat-top-info p.offline { color: var(--danger); }
 
-        /* ICE status bar */
         #ice-bar {
             display: none; padding: 6px 16px; text-align: center;
             font-size: 0.78rem; color: var(--accent);
@@ -274,14 +248,12 @@
         }
         #ice-bar.visible { display: block; }
 
-        /* Messages */
         .messages-area {
-            flex: 1; overflow-y: auto;
+            flex: 1; overflow-y: auto; position: relative;
             padding: 16px 12px; display: flex; flex-direction: column; gap: 4px;
             background: var(--bg-root);
         }
 
-        /* Light theme chat wallpaper — subtle dot grid */
         [data-theme="light"] .messages-area {
             background-image: radial-gradient(circle, #d0d3d9 1px, transparent 1px);
             background-size: 24px 24px;
@@ -290,6 +262,14 @@
         [data-theme="dark"] .messages-area {
             background-color: #0b141a;
             background-image: none;
+        }
+
+        /* Drag-over highlight */
+        .messages-area.drag-over {
+            outline: 3px dashed var(--accent);
+            outline-offset: -6px;
+            background-color: var(--accent-soft) !important;
+            background-image: none !important;
         }
 
         .message { max-width: 68%; display: flex; flex-direction: column; }
@@ -302,25 +282,18 @@
             box-shadow: var(--shadow-sm);
             max-width: 100%;
         }
-        .message.out .bubble {
-            background: var(--msg-out); color: var(--msg-out-text);
-            border-bottom-right-radius: 4px;
-        }
-        .message.in .bubble {
-            background: var(--msg-in); color: var(--msg-in-text);
-            border-bottom-left-radius: 4px;
-        }
+        .message.out .bubble { background: var(--msg-out); color: var(--msg-out-text); border-bottom-right-radius: 4px; }
+        .message.in  .bubble { background: var(--msg-in);  color: var(--msg-in-text);  border-bottom-left-radius: 4px; }
         .bubble-footer { display: flex; align-items: center; gap: 4px; margin-top: 3px; }
         .msg-time { font-size: 0.64rem; }
         .message.out .msg-time { color: rgba(255,255,255,.65); }
-        .message.in .msg-time  { color: var(--text-sub); }
+        .message.in  .msg-time { color: var(--text-sub); }
 
         .media-wrap { margin-bottom: 4px; border-radius: 10px; overflow: hidden; max-width: 260px; }
         .media-wrap img, .media-wrap video { display: block; max-width: 100%; border-radius: 10px; }
         .file-link { color: inherit; opacity: 0.9; font-size: 0.85rem; text-decoration: none; display: flex; align-items: center; gap: 6px; }
         .file-link:hover { opacity: 1; text-decoration: underline; }
 
-        /* System messages */
         .sys-msg {
             align-self: center;
             background: rgba(0,0,0,.08); color: var(--text-muted);
@@ -328,22 +301,13 @@
         }
         [data-theme="dark"] .sys-msg { background: rgba(255,255,255,.08); }
 
-        /* Input area */
+        /* ── Input row ── */
         .input-row {
             display: none; align-items: flex-end; padding: 10px 14px; gap: 10px;
             background: var(--bg-panel); border-top: 1px solid var(--border);
             flex-shrink: 0; box-shadow: 0 -2px 8px rgba(0,0,0,.05);
         }
         .input-row.visible { display: flex; }
-
-        .attach-preview-bar {
-            display: none; align-items: center; gap: 10px; padding: 8px 14px;
-            background: var(--bg-input); border-top: 1px solid var(--border);
-            flex-shrink: 0;
-        }
-        .attach-preview-bar.visible { display: flex; }
-        .attach-name { font-size: 0.82rem; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-        .attach-remove { background: none; border: none; cursor: pointer; color: var(--danger); font-size: 1rem; padding: 2px 6px; }
 
         .input-box {
             flex: 1; background: var(--bg-input); border-radius: 22px;
@@ -380,7 +344,7 @@
 
         #file-input { display: none; }
 
-        /* ── Phase 4: Room group-chat item ── */
+        /* ── Phase 4: Room item ── */
         .peer-item.room-item { border-bottom: 2px solid var(--border); background: var(--bg-hover); }
         .peer-item.room-item.active, .peer-item.room-item:hover { background: var(--bg-active); }
         .avatar.group { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
@@ -392,20 +356,125 @@
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px;
             display: flex; align-items: center; gap: 6px;
         }
-        .file-xfer-bar-wrap {
-            height: 4px; background: rgba(255,255,255,.28); border-radius: 2px; overflow: hidden;
-        }
+        .file-xfer-bar-wrap { height: 4px; background: rgba(255,255,255,.28); border-radius: 2px; overflow: hidden; }
         .message.in .file-xfer-bar-wrap { background: rgba(0,0,0,.12); }
-        .file-xfer-bar {
-            height: 100%; background: currentColor; opacity: 0.75;
-            width: 0%; border-radius: 2px; transition: width 0.18s;
-        }
+        .file-xfer-bar { height: 100%; background: currentColor; opacity: 0.75; width: 0%; border-radius: 2px; transition: width 0.18s; }
         .file-xfer-status { font-size: 0.72rem; opacity: 0.7; }
-        .file-xfer-link {
-            color: inherit; opacity: 0.9; font-size: 0.85rem;
-            text-decoration: none; display: flex; align-items: center; gap: 7px;
-        }
+        .file-xfer-link { color: inherit; opacity: 0.9; font-size: 0.85rem; text-decoration: none; display: flex; align-items: center; gap: 7px; }
         .file-xfer-link:hover { opacity: 1; text-decoration: underline; }
+        .file-xfer-size { font-size: 0.72em; opacity: 0.7; }
+        .file-xfer-content { margin-top: 2px; }
+
+        /* ── Phase 4.5: Received inline previews ── */
+        .received-img {
+            max-width: 240px; max-height: 200px; border-radius: 8px;
+            cursor: zoom-in; display: block; margin-top: 4px;
+            transition: opacity 0.15s;
+        }
+        .received-img:hover { opacity: 0.88; }
+        .received-video { max-width: 260px; border-radius: 8px; display: block; margin-top: 4px; }
+        .received-audio { width: 220px; margin-top: 6px; }
+
+        .received-file-actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+        .file-action-btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 12px; border-radius: 16px;
+            font-size: 0.78rem; font-weight: 600; text-decoration: none;
+            background: rgba(255,255,255,.18); color: inherit;
+            border: 1px solid rgba(255,255,255,.3);
+            transition: background 0.15s; cursor: pointer;
+        }
+        .message.in .file-action-btn { background: rgba(0,0,0,.08); border-color: rgba(0,0,0,.12); }
+        .file-action-btn:hover { background: rgba(255,255,255,.3); }
+        .message.in .file-action-btn:hover { background: rgba(0,0,0,.16); }
+
+        /* ── Phase 4.5: File staging panel ── */
+        .file-stage-panel {
+            display: none; flex-direction: column;
+            background: var(--bg-panel); border-top: 1px solid var(--border);
+            max-height: 230px; flex-shrink: 0;
+        }
+        .file-stage-panel.visible { display: flex; }
+
+        .file-stage-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 14px 4px; flex-shrink: 0;
+        }
+        .file-stage-count { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); flex: 1; }
+        .file-stage-warn { font-size: 0.72rem; color: #d97706; }
+
+        .file-stage-list {
+            overflow-y: auto; flex: 1;
+            padding: 0 10px 4px;
+            display: flex; flex-direction: column; gap: 5px;
+        }
+
+        .file-stage-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 6px 8px; background: var(--bg-input); border-radius: 8px;
+            flex-shrink: 0;
+        }
+
+        .file-stage-thumb {
+            width: 42px; height: 42px; flex-shrink: 0; border-radius: 6px; overflow: hidden;
+            background: var(--bg-hover); display: flex; align-items: center; justify-content: center;
+        }
+        .file-stage-thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .file-stage-thumb-vid { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .file-stage-thumb-icon { font-size: 1.3rem; color: var(--accent); }
+
+        .file-stage-info { flex: 1; min-width: 0; }
+        .file-stage-name { font-size: 0.82rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-stage-meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 1px; }
+
+        .file-stage-remove {
+            background: none; border: none; cursor: pointer; padding: 5px 7px;
+            color: var(--text-muted); border-radius: 4px; font-size: 0.88rem;
+            transition: color 0.15s, background 0.15s; flex-shrink: 0;
+        }
+        .file-stage-remove:hover { color: var(--danger); background: rgba(228,23,73,.1); }
+
+        .file-stage-footer {
+            padding: 6px 14px 8px; display: flex;
+            align-items: center; justify-content: space-between; flex-shrink: 0;
+        }
+
+        .file-send-all-btn {
+            display: flex; align-items: center; gap: 6px;
+            background: var(--accent); color: #fff; border: none;
+            padding: 7px 20px; border-radius: 20px; font-size: 0.88rem; font-weight: 600;
+            cursor: pointer; font-family: inherit;
+            transition: filter 0.15s, transform 0.12s;
+        }
+        .file-send-all-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+        .file-stage-clear {
+            font-size: 0.8rem; color: var(--text-muted); background: none; border: none;
+            cursor: pointer; padding: 4px 8px; border-radius: 4px;
+            transition: color 0.15s;
+        }
+        .file-stage-clear:hover { color: var(--danger); }
+
+        /* ── Lightbox ── */
+        .lightbox {
+            display: none; position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0,0,0,.88);
+            align-items: center; justify-content: center;
+            cursor: zoom-out;
+        }
+        .lightbox.visible { display: flex; }
+        .lightbox-img {
+            max-width: 90vw; max-height: 90vh; object-fit: contain;
+            border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,.6);
+            cursor: default;
+        }
+        .lightbox-close {
+            position: absolute; top: 16px; right: 20px;
+            background: rgba(255,255,255,.15); border: none; cursor: pointer;
+            color: #fff; width: 40px; height: 40px; border-radius: 50%;
+            font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s;
+        }
+        .lightbox-close:hover { background: rgba(255,255,255,.28); }
 
         /* Scrollbar */
         ::-webkit-scrollbar { width: 5px; }
@@ -416,7 +485,6 @@
         .sidebar, .chat-area, .chat-top, .sidebar-header,
         .input-row, .login-card, .field input, .peer-item { transition: background 0.2s, border-color 0.2s, color 0.2s; }
 
-        /* Responsive — collapse sidebar on small screens */
         @media (max-width: 600px) {
             .sidebar { width: 100%; max-width: none; position: absolute; z-index: 50; height: 100%; }
             .sidebar.hidden { display: none; }
@@ -425,7 +493,6 @@
 </head>
 <body>
 
-<!-- Theme toggle — always visible -->
 <button id="theme-toggle" onclick="toggleTheme()" title="Toggle light / dark mode">
     <i class="fa-solid fa-moon" id="theme-icon"></i>
 </button>
@@ -483,17 +550,13 @@
     <!-- Chat area -->
     <div class="chat-area">
 
-        <!-- No chat selected overlay -->
         <div class="no-chat-overlay" id="no-chat-overlay">
             <div class="no-chat-icon"><i class="fa-solid fa-comments"></i></div>
             <h2>P2P Nexus</h2>
             <p>Click a peer on the left to start a direct, encrypted conversation.</p>
-            <p style="font-size:.8rem; margin-top:4px; color:var(--text-sub)">
-                No messages pass through any server.
-            </p>
+            <p style="font-size:.8rem; margin-top:4px; color:var(--text-sub)">No messages pass through any server.</p>
         </div>
 
-        <!-- Chat header -->
         <div class="chat-top" id="chat-top" style="display:none">
             <div class="avatar" id="chat-top-avatar"><i class="fa-solid fa-user"></i></div>
             <div class="chat-top-info">
@@ -502,27 +565,35 @@
             </div>
         </div>
 
-        <!-- ICE status -->
         <div id="ice-bar"><i class="fa-solid fa-circle-notch fa-spin"></i> &nbsp;Establishing direct connection…</div>
 
-        <!-- Messages -->
+        <!-- Messages — also the drag-and-drop drop zone -->
         <div class="messages-area" id="messages-area"></div>
 
-        <!-- Attachment preview -->
-        <div class="attach-preview-bar" id="attach-bar">
-            <i class="fa-solid fa-paperclip" style="color:var(--accent)"></i>
-            <span class="attach-name" id="attach-name"></span>
-            <button class="attach-remove" onclick="clearAttachment()" title="Remove">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
+        <!-- Phase 4.5: File staging panel (replaces single attach-bar) -->
+        <div class="file-stage-panel" id="file-stage-panel">
+            <div class="file-stage-header">
+                <span class="file-stage-count" id="file-stage-count">0 files</span>
+                <span class="file-stage-warn" id="file-stage-warn" style="display:none"></span>
+                <button class="file-stage-clear" onclick="clearAttachment()" title="Clear all files">
+                    <i class="fa-solid fa-xmark"></i> Clear all
+                </button>
+            </div>
+            <div class="file-stage-list" id="file-stage-list"></div>
+            <div class="file-stage-footer">
+                <span style="font-size:0.72rem;color:var(--text-sub)">Drop more files or use the clip below</span>
+                <button class="file-send-all-btn" onclick="window.sendMessage()">
+                    <i class="fa-solid fa-paper-plane"></i> Send All
+                </button>
+            </div>
         </div>
 
         <!-- Input row -->
         <div class="input-row" id="input-row">
-            <button class="icon-btn" onclick="document.getElementById('file-input').click()" title="Attach file">
+            <button class="icon-btn" onclick="document.getElementById('file-input').click()" title="Attach files">
                 <i class="fa-solid fa-paperclip"></i>
             </button>
-            <input type="file" id="file-input" onchange="handleFileSelect(this)">
+            <input type="file" id="file-input" multiple onchange="handleFileSelect(this)">
 
             <div class="input-box">
                 <input type="text" id="msg-input" placeholder="Type a message…"
@@ -536,20 +607,27 @@
     </div>
 </div>
 
-<!-- ── Scripts (M5: extracted to src/app.js) ── -->
+<!-- Lightbox overlay -->
+<div id="lightbox" class="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="event.stopPropagation();closeLightbox()" title="Close">
+        <i class="fa-solid fa-xmark"></i>
+    </button>
+    <img id="lightbox-img" class="lightbox-img" alt="" onclick="event.stopPropagation()">
+</div>
+
 <script type="module" src="./src/app.js"></script>
-<!-- Phase 2 debug panel — toggle with Ctrl+D -->
+
 <div id="dbg-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;height:200px;background:#1a1a1a;border-top:2px solid #00a884;z-index:999;font-family:monospace;font-size:11px;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 10px;background:#111;color:#8696a0;">
-        <span style="color:#00a884;font-weight:bold;">Phase 2 Debug Console</span>
+        <span style="color:#00a884;font-weight:bold;">Debug Console</span>
         <button onclick="toggleDebug()" style="background:none;border:none;color:#8696a0;cursor:pointer;font-size:1rem;">✕</button>
     </div>
     <pre id="dbg-output" style="margin:0;padding:8px 10px;color:#e9edef;height:164px;overflow-y:auto;white-space:pre-wrap;"></pre>
 </div>
 <script>
-// Ctrl+D toggles the debug panel
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'd') { e.preventDefault(); window.toggleDebug && window.toggleDebug(); }
+    if (e.key === 'Escape') { window.closeLightbox && window.closeLightbox(); }
 });
 </script>
 </body>
