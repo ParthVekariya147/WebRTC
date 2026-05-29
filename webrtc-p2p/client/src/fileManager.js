@@ -48,7 +48,7 @@ export class FileManager extends EventTarget {
   constructor(peerManager) {
     super();
     this._pm = peerManager;
-    // active outbound transfers: id → { name, totalChunks, sent }
+    // active outbound transfers: id → { name, totalChunks, sent, peerId }
     this._outbound = new Map();
     // active inbound transfers: id → { name, mime, size, totalChunks, chunks: Map<index, ArrayBuffer> }
     this._inbound = new Map();
@@ -73,44 +73,45 @@ export class FileManager extends EventTarget {
     const buffer = await file.arrayBuffer();
     const totalChunks = Math.ceil(buffer.byteLength / CHUNK_SIZE);
 
-    this._outbound.set(id, { name: file.name, totalChunks, sent: 0 });
+    this._outbound.set(id, { name: file.name, totalChunks, sent: 0, peerId });
 
-    // Send metadata frame
     const startMsg = JSON.stringify({
-      type: 'file-start',
-      id,
-      name: file.name,
-      size: file.size,
+      type: 'file-start', id,
+      name: file.name, size: file.size,
       mime: file.type || 'application/octet-stream',
       totalChunks,
     });
     this._pm.safeSend(peerId, 'file', startMsg);
 
-    // Send binary chunks
+    let aborted = false;
+
     for (let i = 0; i < totalChunks; i++) {
-      // Back-pressure: wait if the DataChannel send buffer is too full (H6).
       const channel = this._pm.getChannel(peerId, 'file');
-      if (!channel || channel.readyState !== 'open') break; // peer disconnected
+      if (!channel || channel.readyState !== 'open') { aborted = true; break; }
 
       if (channel.bufferedAmount > BUFFER_HIGH) {
         channel.bufferedAmountLowThreshold = BUFFER_LOW;
+        // Wait for drain — but resolve immediately if channel closes (Bug 2 fix).
         await new Promise((resolve) => {
           const timeout = setTimeout(resolve, BUFFER_DRAIN_TIMEOUT);
-          const onLow = () => {
+          const cleanup = () => {
             clearTimeout(timeout);
             channel.removeEventListener('bufferedamountlow', onLow);
-            resolve();
+            channel.removeEventListener('close', onClose);
+            channel.removeEventListener('error', onClose);
           };
+          const onLow   = () => { cleanup(); resolve(); };
+          const onClose = () => { cleanup(); resolve(); };
           channel.addEventListener('bufferedamountlow', onLow);
+          channel.addEventListener('close', onClose);
+          channel.addEventListener('error', onClose);
         });
-        // Re-check after waiting — peer may have disconnected during the wait
-        if (this._pm.getChannel(peerId, 'file')?.readyState !== 'open') break;
+        if (this._pm.getChannel(peerId, 'file')?.readyState !== 'open') { aborted = true; break; }
       }
 
       const start = i * CHUNK_SIZE;
       const chunk = buffer.slice(start, start + CHUNK_SIZE);
-      const frame = encodeChunk(id, i, chunk);
-      this._pm.safeSend(peerId, 'file', frame);
+      this._pm.safeSend(peerId, 'file', encodeChunk(id, i, chunk));
 
       const transfer = this._outbound.get(id);
       if (transfer) {
@@ -119,13 +120,21 @@ export class FileManager extends EventTarget {
           detail: { id, name: file.name, sent: transfer.sent, total: totalChunks, peerId },
         }));
       }
-      // Yield to the event loop between chunks to avoid monopolising the DataChannel
       await new Promise((r) => setTimeout(r, 0));
     }
 
-    // Send end frame
-    this._pm.safeSend(peerId, 'file', JSON.stringify({ type: 'file-end', id }));
     this._outbound.delete(id);
+
+    if (aborted) {
+      // Only emit if peerLeft() hasn't already fired it for this transfer
+      this.dispatchEvent(new CustomEvent('transfer-aborted', {
+        detail: { id, peerId, outbound: true },
+      }));
+      throw new Error(`sendFile aborted: peer ${peerId} disconnected`);
+    }
+
+    // file-end only sent on clean completion (Bug 1 fix — no partial assembly on receiver)
+    this._pm.safeSend(peerId, 'file', JSON.stringify({ type: 'file-end', id }));
   }
 
   _handleControl(peerId, raw) {
@@ -180,12 +189,22 @@ export class FileManager extends EventTarget {
     }));
   }
 
-  // Abort all inbound transfers from a peer that disconnected
+  // Abort all transfers (inbound and outbound) for a peer that disconnected
   peerLeft(peerId) {
     for (const [id, transfer] of this._inbound) {
       if (transfer.from === peerId) {
         this._inbound.delete(id);
         this.dispatchEvent(new CustomEvent('transfer-aborted', { detail: { id, peerId } }));
+      }
+    }
+    // Outbound: sendFile loop will detect the closed channel and throw on its
+    // next iteration, but emit the event now so the UI updates immediately (Bug 3 fix).
+    for (const [id, transfer] of this._outbound) {
+      if (transfer.peerId === peerId) {
+        this.dispatchEvent(new CustomEvent('transfer-aborted', {
+          detail: { id, peerId, outbound: true },
+        }));
+        // Leave cleanup to sendFile() — it will _outbound.delete(id) and throw
       }
     }
   }

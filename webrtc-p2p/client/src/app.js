@@ -585,13 +585,20 @@ async function sendAllPendingFiles() {
     scrollEnd();
 
     for (const { id, file, entry } of entries) {
+        // If peer already went offline (e.g. previous file in the batch failed), cancel immediately
+        if (conversations[activePeerId]?.status !== 'online') {
+            entry.statusEl.textContent = 'Cancelled — peer offline';
+            entry.barEl.style.opacity = '0.4';
+            activeTransfers.delete(id);
+            continue;
+        }
         try {
             await fileManager.sendFile(activePeerId, file, id);
             if (!entry.statusEl.textContent.includes('✓')) entry.statusEl.textContent = 'Sent ✓';
             entry.barEl.style.width = '100%';
         } catch (err) {
-            entry.statusEl.textContent = 'Send failed';
-            log.error('[file] sendFile error:', err);
+            // transfer-aborted event already updated the UI; catch stops the promise chain
+            log.error('[file] sendFile aborted:', err.message);
         }
         activeTransfers.delete(id);
     }
