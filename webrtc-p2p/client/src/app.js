@@ -219,6 +219,11 @@ function loginStatus(msg, isError = false) {
     }
 }
 
+// ── Mobile back navigation ─────────────────────────────────────────────────
+window.goBack = function () {
+    document.getElementById('sidebar').classList.remove('hidden');
+};
+
 // ── Drag-and-drop ──────────────────────────────────────────────────────────
 function setupDragDrop() {
     const area = document.getElementById('messages-area');
@@ -321,6 +326,10 @@ function openChat(peerId) {
     document.getElementById('no-chat-overlay').style.display = 'none';
     document.getElementById('chat-top').style.display  = 'flex';
     document.getElementById('input-row').classList.add('visible');
+    // On mobile the sidebar covers the screen — slide it out to reveal chat
+    if (window.innerWidth <= 640) {
+        document.getElementById('sidebar').classList.add('hidden');
+    }
     refreshChatTop(peerId);
     const area = document.getElementById('messages-area');
     area.innerHTML = '';

@@ -2,7 +2,7 @@
 <html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>P2P Nexus</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -60,12 +60,13 @@
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        * { -webkit-tap-highlight-color: transparent; }
 
         body {
             font-family: 'Inter', system-ui, sans-serif;
             background: var(--bg-root);
             color: var(--text-main);
-            height: 100vh;
+            height: 100dvh;           /* dvh tracks the visible viewport on mobile (no address-bar jump) */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -485,9 +486,95 @@
         .sidebar, .chat-area, .chat-top, .sidebar-header,
         .input-row, .login-card, .field input, .peer-item { transition: background 0.2s, border-color 0.2s, color 0.2s; }
 
-        @media (max-width: 600px) {
-            .sidebar { width: 100%; max-width: none; position: absolute; z-index: 50; height: 100%; }
-            .sidebar.hidden { display: none; }
+        /* ── Back button (mobile only, hidden on desktop) ── */
+        .chat-back-btn { display: none; }
+
+        /* ── Tablet: 641 – 900 px ── */
+        @media (min-width: 641px) and (max-width: 900px) {
+            :root { --sidebar-w: 260px; }
+            .message { max-width: 76%; }
+        }
+
+        /* ── Mobile: ≤ 640 px ── */
+        @media (max-width: 640px) {
+            /* Sidebar becomes a full-screen slide-in drawer */
+            #app-screen { position: relative; overflow: hidden; }
+
+            .sidebar {
+                position: absolute; inset: 0;
+                width: 100% !important;
+                z-index: 20;
+                transform: translateX(0);
+                transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .sidebar.hidden {
+                transform: translateX(-100%);
+                pointer-events: none;
+            }
+
+            /* Sidebar header: safe area for iPhone notch */
+            .sidebar-header {
+                padding-top: env(safe-area-inset-top);
+                height: calc(64px + env(safe-area-inset-top));
+            }
+
+            /* Chat area stretches full width behind the drawer */
+            .chat-area { width: 100%; }
+
+            /* Chat header: left-safe, show back button */
+            .chat-top {
+                padding-left: max(16px, env(safe-area-inset-left));
+                padding-right: max(16px, env(safe-area-inset-right));
+                padding-top: env(safe-area-inset-top);
+                height: calc(64px + env(safe-area-inset-top));
+            }
+            .chat-back-btn { display: flex !important; }
+
+            /* Input row: safe area for iPhone home bar */
+            .input-row {
+                padding-bottom: calc(10px + env(safe-area-inset-bottom));
+                padding-left: max(14px, env(safe-area-inset-left));
+                padding-right: max(14px, env(safe-area-inset-right));
+            }
+            .file-stage-footer {
+                padding-bottom: calc(8px + env(safe-area-inset-bottom));
+            }
+
+            /* Touch-friendly tap targets (min 44 × 44 px) */
+            .icon-btn, .send-btn { width: 44px; height: 44px; }
+            .peer-item { min-height: 62px; }
+
+            /* Wider message bubbles */
+            .message { max-width: 84%; }
+
+            /* Smaller media previews so they don't overflow */
+            .received-img  { max-width: min(200px, 70vw); }
+            .received-video { max-width: min(220px, 78vw); }
+            .received-audio { width: min(200px, 70vw); }
+            .media-wrap { max-width: min(240px, 78vw); }
+
+            /* File stage panel height cap */
+            .file-stage-panel { max-height: 190px; }
+
+            /* Login card: safe insets + no bleed */
+            .login-card {
+                margin: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+                padding: 36px 24px 28px;
+                border-radius: 16px;
+            }
+
+            /* Theme toggle: pull it above the safe-area top */
+            #theme-toggle {
+                top: calc(14px + env(safe-area-inset-top));
+                right: max(18px, env(safe-area-inset-right));
+                z-index: 300;
+            }
+
+            /* Drag-drop: show on chat area behind the panel overlay */
+            .messages-area.drag-over { outline-offset: -4px; }
+
+            /* Lightbox close button bigger on touch */
+            .lightbox-close { width: 48px; height: 48px; font-size: 1.4rem; }
         }
     </style>
 </head>
@@ -558,6 +645,9 @@
         </div>
 
         <div class="chat-top" id="chat-top" style="display:none">
+            <button class="chat-back-btn icon-btn" onclick="goBack()" title="Back to contacts">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
             <div class="avatar" id="chat-top-avatar"><i class="fa-solid fa-user"></i></div>
             <div class="chat-top-info">
                 <h2 id="active-peer-name">Peer</h2>
