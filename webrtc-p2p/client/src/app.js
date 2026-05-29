@@ -45,6 +45,17 @@ export function fmtSize(bytes) {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
+// Canonical file message schema stored in conv.messages:
+// { type:'file', sender:'me'|'them', name, mime, size, blobUrl, time, _xferId? }
+// blobUrl is null while in-progress; set to a blob URL when file-received fires.
+// _xferId is the transfer UUID used to update the stub on file-received (receiver only).
+
+export function fileSidebarLabel(msg) {
+    const cat = fileCategory(msg.mime || '', msg.name || '');
+    const icons = { image: '📷', video: '🎥', audio: '🎵', pdf: '📄' };
+    return `${icons[cat] || '📎'} ${msg.name || 'File'}`;
+}
+
 function catIcon(cat) {
     const m = { image: 'fa-solid fa-image', video: 'fa-solid fa-film', audio: 'fa-solid fa-music', pdf: 'fa-solid fa-file-pdf' };
     return m[cat] || 'fa-solid fa-file';
@@ -79,10 +90,14 @@ window.joinRoom = function () {
     chatManager = new ChatManager(peerManager);
     fileManager = new FileManager(peerManager);
 
-    fileManager.addEventListener('transfer-start', ({ detail: { id, name, from } }) => {
+    fileManager.addEventListener('transfer-start', ({ detail: { id, name, size, mime, from } }) => {
         ensureConv(from);
         const entry = makeFileBubble('in', name, id);
-        conversations[from].messages.push({ _fileXfer: true, id, sender: 'in', name, time: fmt(Date.now()), complete: false });
+        conversations[from].messages.push({
+            type: 'file', sender: 'them',
+            name, size, mime, blobUrl: null,
+            time: fmt(Date.now()), _xferId: id,
+        });
         if (activePeerId === from) {
             document.getElementById('messages-area').appendChild(entry.wrap);
             scrollEnd();
@@ -104,20 +119,28 @@ window.joinRoom = function () {
     });
 
     fileManager.addEventListener('file-received', ({ detail: { id, name, mime, blob, from } }) => {
+        const url = URL.createObjectURL(blob);
+        _blobUrls.push(url);
+
+        // Update stored message with complete data so any re-render shows the preview
+        const conv = conversations[from];
+        if (conv) {
+            const m = conv.messages.find(x => x.type === 'file' && x._xferId === id);
+            if (m) { m.mime = mime; m.blobUrl = url; m.name = name; }
+        }
+
         const entry = activeTransfers.get(id);
-        if (entry) {
-            const url = URL.createObjectURL(blob);
-            _blobUrls.push(url);
+        if (entry?.wrap.isConnected) {
+            // Live progress bubble is in the DOM — update it in place
             renderReceivedPreview(entry.contentEl, url, name, mime, blob.size);
             entry.barEl.style.width = '100%';
             entry.statusEl.textContent = 'Received ✓';
-            activeTransfers.delete(id);
+        } else if (activePeerId === from) {
+            // Chat is open but progress bubble was not in DOM (chat was closed or navigated
+            // away between transfer-start and file-received) — re-render from stored messages
+            rerenderMessages(from);
         }
-        const conv = conversations[from];
-        if (conv) {
-            const m = conv.messages.find(x => x._fileXfer && x.id === id);
-            if (m) { m.name = name; m.complete = true; m.mime = mime; m.blobUrl = url; m.size = blob.size; }
-        }
+        if (entry) activeTransfers.delete(id);
         renderPeerList();
     });
 
@@ -207,7 +230,38 @@ function showApp() {
     document.getElementById('display-my-name').textContent = myName;
     document.getElementById('display-room-id').textContent = roomId;
     setupDragDrop();
+    setupSwipeBack();
 }
+
+// ── Mobile navigation ──────────────────────────────────────────────────────
+function isMobile() { return window.innerWidth <= 640; }
+
+function hideSidebarOnMobile() {
+    if (isMobile()) document.getElementById('sidebar').classList.add('hidden');
+}
+
+// Called from the back-arrow button in the chat header (mobile only)
+window.goBack = function () {
+    activePeerId = null;
+    document.getElementById('sidebar').classList.remove('hidden');
+    renderPeerList();
+};
+
+// Swipe right from the left edge to go back (feels native on mobile)
+function setupSwipeBack() {
+    const app = document.getElementById('app-screen');
+    let startX = 0;
+    app.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; }, { passive: true });
+    app.addEventListener('touchend', (e) => {
+        if (!isMobile() || activePeerId === null) return;
+        if (e.changedTouches[0].clientX - startX > 72 && startX < 48) window.goBack();
+    }, { passive: true });
+}
+
+// Restore sidebar visibility when rotating back to a wide layout
+window.addEventListener('resize', () => {
+    if (!isMobile()) document.getElementById('sidebar').classList.remove('hidden');
+});
 
 function loginStatus(msg, isError = false) {
     const el = document.getElementById('login-status');
@@ -218,11 +272,6 @@ function loginStatus(msg, isError = false) {
         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> &nbsp;Join Room'; }
     }
 }
-
-// ── Mobile back navigation ─────────────────────────────────────────────────
-window.goBack = function () {
-    document.getElementById('sidebar').classList.remove('hidden');
-};
 
 // ── Drag-and-drop ──────────────────────────────────────────────────────────
 function setupDragDrop() {
@@ -277,7 +326,9 @@ function renderPeerList() {
     if (roomConv) {
         const onlinePeerCount = peerIds.filter(p => conversations[p]?.status === 'online').length;
         const lastRoom = [...roomConv.messages].reverse().find(m => !m.sys);
-        const roomPreview = lastRoom ? lastRoom.text : (onlinePeerCount ? `${onlinePeerCount} peer${onlinePeerCount > 1 ? 's' : ''} online` : 'Waiting for peers…');
+        const roomPreview = lastRoom
+            ? (lastRoom.type === 'file' ? fileSidebarLabel(lastRoom) : (lastRoom.text || ''))
+            : (onlinePeerCount ? `${onlinePeerCount} peer${onlinePeerCount > 1 ? 's' : ''} online` : 'Waiting for peers…');
         const d = document.createElement('div');
         d.className = `peer-item room-item${activePeerId === ROOM_ID ? ' active' : ''}`;
         d.onclick = () => openChat(ROOM_ID);
@@ -298,7 +349,7 @@ function renderPeerList() {
         const conv = conversations[pid];
         const last = [...conv.messages].reverse().find(m => !m.sys);
         const preview = last
-            ? (last._fileXfer ? `📎 ${last.name || 'File'}` : (last.media ? '📎 File' : last.text))
+            ? (last.type === 'file' ? fileSidebarLabel(last) : (last.text || ''))
             : 'No messages yet';
         const isOnline = conv.status === 'online';
         const d = document.createElement('div');
@@ -326,21 +377,11 @@ function openChat(peerId) {
     document.getElementById('no-chat-overlay').style.display = 'none';
     document.getElementById('chat-top').style.display  = 'flex';
     document.getElementById('input-row').classList.add('visible');
-    // On mobile the sidebar covers the screen — slide it out to reveal chat
-    if (window.innerWidth <= 640) {
-        document.getElementById('sidebar').classList.add('hidden');
-    }
     refreshChatTop(peerId);
-    const area = document.getElementById('messages-area');
-    area.innerHTML = '';
-    conversations[peerId].messages.forEach((m) => {
-        if (m.sys) { const d = document.createElement('div'); d.className = 'sys-msg'; d.textContent = m.text; area.appendChild(d); }
-        else if (m._fileXfer) appendFileBubble(m, false);
-        else appendBubble(m, false);
-    });
-    scrollEnd();
+    rerenderMessages(peerId);
     renderPeerList();
     document.getElementById('msg-input').focus();
+    hideSidebarOnMobile();
 }
 
 function refreshChatTop(peerId) {
@@ -367,87 +408,57 @@ function refreshChatTop(peerId) {
     av.className = `avatar ${isOnline ? 'online' : ''}`;
 }
 
+// ── Re-render messages area from stored conv.messages ──────────────────────
+function rerenderMessages(peerId) {
+    const area = document.getElementById('messages-area');
+    area.innerHTML = '';
+    conversations[peerId].messages.forEach((m) => {
+        if (m.sys) {
+            const d = document.createElement('div');
+            d.className = 'sys-msg';
+            d.textContent = m.text;
+            area.appendChild(d);
+        } else {
+            appendBubble(m, false);
+        }
+    });
+    scrollEnd();
+}
+
 // ── Render bubble ──────────────────────────────────────────────────────────
 function appendBubble(msg, scroll = true) {
     const area = document.getElementById('messages-area');
     const wrap = document.createElement('div');
     wrap.className = `message ${msg.sender === 'me' ? 'out' : 'in'}`;
 
-    let html = '<div class="bubble">';
-    if (msg.media) {
-        const blob = new Blob([msg.media.blob], { type: msg.media.fileType });
-        const url  = URL.createObjectURL(blob);
-        _blobUrls.push(url);
-        html += '<div class="media-wrap">';
-        if      (msg.media.fileType.startsWith('image/')) html += `<img src="${url}" alt="${esc(msg.media.fileName)}" onload="URL.revokeObjectURL(this.src)">`;
-        else if (msg.media.fileType.startsWith('video/')) html += `<video controls src="${url}" onloadeddata="URL.revokeObjectURL(this.src)"></video>`;
-        else if (msg.media.fileType.startsWith('audio/')) html += `<audio controls src="${url}" onloadeddata="URL.revokeObjectURL(this.src)"></audio>`;
-        else html += `<a class="file-link" href="${url}" download="${esc(msg.media.fileName)}" onclick="setTimeout(()=>URL.revokeObjectURL(this.href),1000)"><i class="fa-solid fa-file-arrow-down"></i> ${esc(msg.media.fileName)}</a>`;
-        html += '</div>';
-    }
-    if (msg.text) html += `<span>${esc(msg.text)}</span>`;
-    html += `<div class="bubble-footer"><span class="msg-time">${msg.time}</span></div></div>`;
+    if (msg.type === 'file') {
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
 
-    wrap.innerHTML = html;
-    area.appendChild(wrap);
-    if (scroll) scrollEnd();
-}
+        const nameEl = document.createElement('div');
+        nameEl.className = 'file-xfer-name';
+        nameEl.innerHTML = `<i class="fa-solid fa-file"></i>${esc(msg.name)}`;
+        bubble.appendChild(nameEl);
 
-// ── File bubble re-render for history (fixes _fileXfer undefined bug) ─────────
-// Called by openChat when replaying stored _fileXfer messages.
-// makeFileBubble() creates live DOM nodes but they're lost when openChat clears
-// the messages area. This function re-creates the bubble from stored metadata.
-function appendFileBubble(msg, scroll = true) {
-    const area = document.getElementById('messages-area');
-
-    // Transfer still in progress — the live DOM node is in activeTransfers; re-attach it.
-    if (!msg.complete) {
-        const entry = activeTransfers.get(msg.id);
-        if (entry) {
-            area.appendChild(entry.wrap);
-            if (scroll) scrollEnd();
-            return;
+        if (msg.blobUrl) {
+            const contentEl = document.createElement('div');
+            contentEl.className = 'file-xfer-content';
+            renderReceivedPreview(contentEl, msg.blobUrl, msg.name, msg.mime, msg.size);
+            bubble.appendChild(contentEl);
         }
-        // No live node (e.g. chat was closed before transfer finished) — show placeholder.
-    }
 
-    const wrap = document.createElement('div');
-    wrap.className = `message ${msg.sender === 'me' ? 'out' : 'in'}`;
-
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-
-    const xfer = document.createElement('div');
-    xfer.className = 'file-xfer';
-
-    const nameEl = document.createElement('div');
-    nameEl.className = 'file-xfer-name';
-    nameEl.innerHTML = `<i class="fa-solid fa-file"></i>${esc(msg.name || 'File')}`;
-    xfer.appendChild(nameEl);
-
-    const statusEl = document.createElement('div');
-    statusEl.className = 'file-xfer-status';
-
-    const contentEl = document.createElement('div');
-    contentEl.className = 'file-xfer-content';
-
-    if (msg.complete && msg.blobUrl) {
-        renderReceivedPreview(contentEl, msg.blobUrl, msg.name, msg.mime, msg.size);
-        statusEl.textContent = msg.sender === 'me' ? 'Sent ✓' : 'Received ✓';
+        const footer = document.createElement('div');
+        footer.className = 'bubble-footer';
+        footer.innerHTML = `<span class="msg-time">${msg.time}</span>`;
+        bubble.appendChild(footer);
+        wrap.appendChild(bubble);
     } else {
-        statusEl.textContent = msg.sender === 'me' ? 'Sent ✓' : '(File unavailable after reload)';
+        let html = '<div class="bubble">';
+        if (msg.text) html += `<span>${esc(msg.text)}</span>`;
+        html += `<div class="bubble-footer"><span class="msg-time">${msg.time}</span></div></div>`;
+        wrap.innerHTML = html;
     }
 
-    xfer.appendChild(statusEl);
-    xfer.appendChild(contentEl);
-
-    const footer = document.createElement('div');
-    footer.className = 'bubble-footer';
-    footer.innerHTML = `<span class="msg-time">${msg.time || fmt(Date.now())}</span>`;
-
-    bubble.appendChild(xfer);
-    bubble.appendChild(footer);
-    wrap.appendChild(bubble);
     area.appendChild(wrap);
     if (scroll) scrollEnd();
 }
@@ -557,7 +568,17 @@ async function sendAllPendingFiles() {
     const area = document.getElementById('messages-area');
     const entries = filesToSend.map(({ id, file }) => {
         const entry = makeFileBubble('out', file.name, id);
-        conv.messages.push({ _fileXfer: true, sender: 'me', id, name: file.name, time: fmt(Date.now()), complete: false });
+        // Store a complete, re-renderable message in conv.messages
+        const blobUrl = URL.createObjectURL(file);
+        _blobUrls.push(blobUrl);
+        conv.messages.push({
+            type: 'file', sender: 'me',
+            name: file.name,
+            mime: file.type || 'application/octet-stream',
+            size: file.size,
+            blobUrl,
+            time: fmt(Date.now()),
+        });
         area.appendChild(entry.wrap);
         return { id, file, entry };
     });
@@ -568,12 +589,11 @@ async function sendAllPendingFiles() {
             await fileManager.sendFile(activePeerId, file, id);
             if (!entry.statusEl.textContent.includes('✓')) entry.statusEl.textContent = 'Sent ✓';
             entry.barEl.style.width = '100%';
-            const m = conv.messages.find(x => x._fileXfer && x.id === id);
-            if (m) m.complete = true;
         } catch (err) {
             entry.statusEl.textContent = 'Send failed';
             log.error('[file] sendFile error:', err);
         }
+        activeTransfers.delete(id);
     }
 }
 

@@ -1,7 +1,7 @@
 // app.test.js — tests for pure helpers exported from app.js
 // Focus: esc() XSS prevention (L1 treated as security fix)
 import { describe, it, expect } from 'vitest';
-import { esc, fmt, fileCategory, fmtSize } from './app.js';
+import { esc, fmt, fileCategory, fmtSize, fileSidebarLabel } from './app.js';
 
 // ── esc() — XSS prevention ─────────────────────────────────────────────────
 
@@ -175,6 +175,50 @@ describe('fmtSize() — byte size formatting', () => {
     it('formats gigabytes', () => {
         expect(fmtSize(1024 * 1024 * 1024)).toBe('1.00 GB');
         expect(fmtSize(1024 * 1024 * 1024 * 2.5)).toBe('2.50 GB');
+    });
+});
+
+// ── fileSidebarLabel() ─────────────────────────────────────────────────────
+
+describe('fileSidebarLabel() — sidebar file preview label', () => {
+    it('shows photo icon for images', () => {
+        expect(fileSidebarLabel({ mime: 'image/jpeg', name: 'photo.jpg' })).toBe('📷 photo.jpg');
+        expect(fileSidebarLabel({ mime: 'image/png',  name: 'pic.png'   })).toBe('📷 pic.png');
+    });
+
+    it('shows video icon for videos', () => {
+        expect(fileSidebarLabel({ mime: 'video/mp4',  name: 'clip.mp4'  })).toBe('🎥 clip.mp4');
+        expect(fileSidebarLabel({ mime: 'video/webm', name: 'film.webm' })).toBe('🎥 film.webm');
+    });
+
+    it('shows audio icon for audio', () => {
+        expect(fileSidebarLabel({ mime: 'audio/mpeg', name: 'song.mp3' })).toBe('🎵 song.mp3');
+        expect(fileSidebarLabel({ mime: 'audio/wav',  name: 'beat.wav' })).toBe('🎵 beat.wav');
+    });
+
+    it('shows document icon for PDFs', () => {
+        expect(fileSidebarLabel({ mime: 'application/pdf', name: 'doc.pdf' })).toBe('📄 doc.pdf');
+    });
+
+    it('shows attachment icon for other file types', () => {
+        expect(fileSidebarLabel({ mime: 'application/zip', name: 'archive.zip' })).toBe('📎 archive.zip');
+        expect(fileSidebarLabel({ mime: 'text/plain',       name: 'notes.txt'  })).toBe('📎 notes.txt');
+    });
+
+    it('never returns a string containing "undefined"', () => {
+        expect(fileSidebarLabel({ mime: null,      name: null      })).not.toContain('undefined');
+        expect(fileSidebarLabel({ mime: undefined, name: undefined })).not.toContain('undefined');
+        expect(fileSidebarLabel({})).not.toContain('undefined');
+    });
+
+    it('falls back to "File" when name is null or missing', () => {
+        expect(fileSidebarLabel({ mime: 'image/png', name: null      })).toBe('📷 File');
+        expect(fileSidebarLabel({ mime: 'image/png'                  })).toBe('📷 File');
+        expect(fileSidebarLabel({ mime: 'application/zip', name: null})).toBe('📎 File');
+    });
+
+    it('detects PDF by filename extension when mime is generic', () => {
+        expect(fileSidebarLabel({ mime: 'application/octet-stream', name: 'report.pdf' })).toBe('📄 report.pdf');
     });
 });
 

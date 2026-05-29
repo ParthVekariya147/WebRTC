@@ -135,7 +135,7 @@ export class PeerManager extends EventTarget {
 
       // Offerer creates both channels (D4 — separate chat + file channels)
       const chatChannel = pc.createDataChannel('chat', { ordered: true });
-      const fileChannel  = pc.createDataChannel('file', { ordered: false });
+      const fileChannel  = pc.createDataChannel('file', { ordered: true });
       this._registerChannel(peerId, chatChannel);
       this._registerChannel(peerId, fileChannel);
 

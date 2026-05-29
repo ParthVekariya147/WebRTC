@@ -43,6 +43,7 @@ export class SignalingClient extends EventTarget {
 
     this.ws.onerror = (err) => {
       log.error('WebSocket error:', err);
+      this.dispatchEvent(new CustomEvent('error', { detail: { message: 'Connection failed' } }));
     };
   }
 

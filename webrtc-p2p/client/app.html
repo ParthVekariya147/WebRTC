@@ -489,6 +489,9 @@
         /* ── Back button (mobile only, hidden on desktop) ── */
         .chat-back-btn { display: none; }
 
+        /* Remove 300ms tap delay on all interactive elements */
+        button, a, .peer-item, label { touch-action: manipulation; }
+
         /* ── Tablet: 641 – 900 px ── */
         @media (min-width: 641px) and (max-width: 900px) {
             :root { --sidebar-w: 260px; }
@@ -506,6 +509,7 @@
                 z-index: 20;
                 transform: translateX(0);
                 transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+                will-change: transform;
             }
             .sidebar.hidden {
                 transform: translateX(-100%);
@@ -518,63 +522,119 @@
                 height: calc(64px + env(safe-area-inset-top));
             }
 
+            /* Smooth native scroll on touch */
+            .peer-list {
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: contain;
+            }
+
             /* Chat area stretches full width behind the drawer */
             .chat-area { width: 100%; }
 
-            /* Chat header: left-safe, show back button */
+            /* Chat header: safe insets + show back button */
             .chat-top {
-                padding-left: max(16px, env(safe-area-inset-left));
-                padding-right: max(16px, env(safe-area-inset-right));
+                padding-left: max(8px, env(safe-area-inset-left));
+                padding-right: max(12px, env(safe-area-inset-right));
                 padding-top: env(safe-area-inset-top);
-                height: calc(64px + env(safe-area-inset-top));
+                height: calc(58px + env(safe-area-inset-top));
+                gap: 8px;
             }
             .chat-back-btn { display: flex !important; }
+
+            /* Truncate long peer names in the chat header */
+            #active-peer-name {
+                overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+                max-width: calc(100vw - 140px);
+            }
+
+            /* Messages area: native-feel scroll, no page-level overscroll */
+            .messages-area {
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: contain;
+                padding: 12px 8px;
+            }
+
+            /* Wider message bubbles */
+            .message { max-width: 86%; }
 
             /* Input row: safe area for iPhone home bar */
             .input-row {
                 padding-bottom: calc(10px + env(safe-area-inset-bottom));
-                padding-left: max(14px, env(safe-area-inset-left));
-                padding-right: max(14px, env(safe-area-inset-right));
+                padding-left: max(10px, env(safe-area-inset-left));
+                padding-right: max(10px, env(safe-area-inset-right));
+                padding-top: 8px;
+                gap: 8px;
             }
             .file-stage-footer {
                 padding-bottom: calc(8px + env(safe-area-inset-bottom));
             }
 
+            /* iOS: font-size ≥ 16px prevents Safari from auto-zooming on input tap */
+            .field input { font-size: 16px !important; }
+            .input-box input { font-size: 16px !important; }
+
             /* Touch-friendly tap targets (min 44 × 44 px) */
             .icon-btn, .send-btn { width: 44px; height: 44px; }
-            .peer-item { min-height: 62px; }
-
-            /* Wider message bubbles */
-            .message { max-width: 84%; }
+            .input-box { min-height: 44px; padding: 10px 14px; }
+            .peer-item { min-height: 64px; padding: 12px 14px; }
 
             /* Smaller media previews so they don't overflow */
-            .received-img  { max-width: min(200px, 70vw); }
-            .received-video { max-width: min(220px, 78vw); }
-            .received-audio { width: min(200px, 70vw); }
-            .media-wrap { max-width: min(240px, 78vw); }
+            .received-img  { max-width: min(200px, 72vw); }
+            .received-video { max-width: min(240px, 80vw); }
+            .received-audio { width: min(220px, 80vw); }
+            .media-wrap { max-width: min(240px, 80vw); }
 
-            /* File stage panel height cap */
-            .file-stage-panel { max-height: 190px; }
+            /* File transfer bubble: cap min-width so it can't overflow on narrow screens */
+            .file-xfer { min-width: min(160px, 56vw); }
+            .file-xfer-name { max-width: min(200px, 56vw); }
+
+            /* File stage panel: smaller so it doesn't eat screen space with keyboard open */
+            .file-stage-panel { max-height: 160px; }
+            .file-stage-list { gap: 4px; }
+            .file-stage-item { padding: 5px 6px; }
+            .file-stage-thumb { width: 36px; height: 36px; }
 
             /* Login card: safe insets + no bleed */
             .login-card {
                 margin: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
-                padding: 36px 24px 28px;
+                padding: 32px 20px 24px;
                 border-radius: 16px;
             }
 
-            /* Theme toggle: pull it above the safe-area top */
+            /* Theme toggle: above the safe-area top, not overlapping login card */
             #theme-toggle {
-                top: calc(14px + env(safe-area-inset-top));
-                right: max(18px, env(safe-area-inset-right));
+                top: calc(12px + env(safe-area-inset-top));
+                right: max(14px, env(safe-area-inset-right));
                 z-index: 300;
             }
 
-            /* Drag-drop: show on chat area behind the panel overlay */
+            /* Drag-drop: tighter outline on mobile */
             .messages-area.drag-over { outline-offset: -4px; }
 
-            /* Lightbox close button bigger on touch */
+            /* Lightbox close button: bigger touch target */
             .lightbox-close { width: 48px; height: 48px; font-size: 1.4rem; }
+            .lightbox-img { max-width: 96vw; max-height: 82vh; }
+
+            /* Peer list empty state: more compact */
+            .peer-list-empty { padding: 28px 16px; font-size: 0.85rem; }
+
+            /* System messages slightly smaller */
+            .sys-msg { font-size: 0.72rem; padding: 3px 10px; }
+
+            /* Room pill */
+            .room-pill { margin: 6px 12px; }
+        }
+
+        /* ── Very small screens (e.g. iPhone SE 375 px) ── */
+        @media (max-width: 390px) {
+            .message { max-width: 90%; }
+            .bubble { font-size: 0.88rem; }
+            .received-img  { max-width: 76vw; }
+            .received-video { max-width: 82vw; }
+            .file-xfer { min-width: min(140px, 60vw); }
+            .file-xfer-name { max-width: min(160px, 60vw); }
+            .chat-top { gap: 6px; }
+            #active-peer-name { max-width: calc(100vw - 120px); }
         }
     </style>
 </head>

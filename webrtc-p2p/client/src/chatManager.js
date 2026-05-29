@@ -22,21 +22,6 @@ export class ChatManager extends EventTarget {
     });
   }
 
-  // Send directly to one peer (WhatsApp-style 1-on-1)
-  sendTo(toPeerId, text) {
-    const msg = {
-      type: 'chat',
-      id: crypto.randomUUID(),
-      from: this._pm.localPeerId,
-      to: toPeerId,
-      text,
-      ts: Date.now(),
-    };
-    this._pm.safeSend(toPeerId, 'chat', JSON.stringify(msg));
-    this.dispatchEvent(new CustomEvent('message', { detail: msg }));
-    return msg;
-  }
-
   // Broadcast to all peers (group chat)
   send(text) {
     const msg = {

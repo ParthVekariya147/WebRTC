@@ -142,7 +142,7 @@ export class FileManager extends EventTarget {
         from: peerId,
       });
       this.dispatchEvent(new CustomEvent('transfer-start', {
-        detail: { id: msg.id, name: msg.name, size: msg.size, from: peerId },
+        detail: { id: msg.id, name: msg.name, size: msg.size, mime: msg.mime, from: peerId },
       }));
     }
 
