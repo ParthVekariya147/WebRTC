@@ -70,18 +70,19 @@ export class FileManager extends EventTarget {
   // before the first progress event fires, avoiding a listener-order race.
   async sendFile(peerId, file, transferId = null) {
     const id = transferId || crypto.randomUUID();
-    const buffer = await file.arrayBuffer();
-    const totalChunks = Math.ceil(buffer.byteLength / CHUNK_SIZE);
+    // Stream chunks directly from the File object one at a time (file.slice → arrayBuffer).
+    // This avoids loading the entire file into memory upfront, which would block the JS
+    // main thread for large videos and starve WebRTC ICE keepalive packets → false disconnect.
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
     this._outbound.set(id, { name: file.name, totalChunks, sent: 0, peerId });
 
-    const startMsg = JSON.stringify({
+    this._pm.safeSend(peerId, 'file', JSON.stringify({
       type: 'file-start', id,
       name: file.name, size: file.size,
       mime: file.type || 'application/octet-stream',
       totalChunks,
-    });
-    this._pm.safeSend(peerId, 'file', startMsg);
+    }));
 
     let aborted = false;
 
@@ -91,27 +92,32 @@ export class FileManager extends EventTarget {
 
       if (channel.bufferedAmount > BUFFER_HIGH) {
         channel.bufferedAmountLowThreshold = BUFFER_LOW;
-        // Wait for drain — but resolve immediately if channel closes (Bug 2 fix).
+        // Resolve as soon as buffer drains OR the channel closes.
+        // Only listen for 'close' (not 'error') — non-fatal DataChannel errors
+        // should not abort the transfer; a real disconnect always fires 'close'.
         await new Promise((resolve) => {
           const timeout = setTimeout(resolve, BUFFER_DRAIN_TIMEOUT);
           const cleanup = () => {
             clearTimeout(timeout);
             channel.removeEventListener('bufferedamountlow', onLow);
             channel.removeEventListener('close', onClose);
-            channel.removeEventListener('error', onClose);
           };
           const onLow   = () => { cleanup(); resolve(); };
           const onClose = () => { cleanup(); resolve(); };
           channel.addEventListener('bufferedamountlow', onLow);
           channel.addEventListener('close', onClose);
-          channel.addEventListener('error', onClose);
         });
         if (this._pm.getChannel(peerId, 'file')?.readyState !== 'open') { aborted = true; break; }
       }
 
+      // Read this chunk from disk only when we're about to send it — keeps memory O(1)
       const start = i * CHUNK_SIZE;
-      const chunk = buffer.slice(start, start + CHUNK_SIZE);
-      this._pm.safeSend(peerId, 'file', encodeChunk(id, i, chunk));
+      const chunkBuf = await file.slice(start, start + CHUNK_SIZE).arrayBuffer();
+
+      // Re-check channel after the async slice read (peer could disconnect during read)
+      if (this._pm.getChannel(peerId, 'file')?.readyState !== 'open') { aborted = true; break; }
+
+      this._pm.safeSend(peerId, 'file', encodeChunk(id, i, chunkBuf));
 
       const transfer = this._outbound.get(id);
       if (transfer) {
@@ -120,20 +126,20 @@ export class FileManager extends EventTarget {
           detail: { id, name: file.name, sent: transfer.sent, total: totalChunks, peerId },
         }));
       }
+      // Yield to the event loop so ICE keepalives and UI updates can run between chunks
       await new Promise((r) => setTimeout(r, 0));
     }
 
     this._outbound.delete(id);
 
     if (aborted) {
-      // Only emit if peerLeft() hasn't already fired it for this transfer
       this.dispatchEvent(new CustomEvent('transfer-aborted', {
         detail: { id, peerId, outbound: true },
       }));
       throw new Error(`sendFile aborted: peer ${peerId} disconnected`);
     }
 
-    // file-end only sent on clean completion (Bug 1 fix — no partial assembly on receiver)
+    // file-end only sent on clean completion — receiver never assembles a partial file
     this._pm.safeSend(peerId, 'file', JSON.stringify({ type: 'file-end', id }));
   }
 
