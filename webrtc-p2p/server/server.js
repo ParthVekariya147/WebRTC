@@ -57,6 +57,13 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
+    // Keepalive ping from client — respond with pong so the WS stays alive
+    // during long file transfers when the signaling channel is otherwise idle.
+    if (msg.type === 'ping') {
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'pong' }));
+      return;
+    }
+
     if (msg.type === 'join') {
       const { roomId, peerId } = msg;
 

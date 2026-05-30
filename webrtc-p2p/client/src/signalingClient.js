@@ -26,6 +26,14 @@ export class SignalingClient extends EventTarget {
       if (this._roomId && this._peerId) {
         this._sendRaw({ type: 'join', roomId: this._roomId, peerId: this._peerId });
       }
+      // Keep the signaling WS alive with periodic pings so Render/nginx idle-connection
+      // timeouts don't close it during long file transfers when signaling is idle.
+      clearInterval(this._pingTimer);
+      this._pingTimer = setInterval(() => {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          this._sendRaw({ type: 'ping' });
+        }
+      }, 25000); // every 25 s — well under the typical 60 s idle timeout
     };
 
     this.ws.onmessage = (e) => {
@@ -67,6 +75,7 @@ export class SignalingClient extends EventTarget {
 
   destroy() {
     this._dead = true;
+    clearInterval(this._pingTimer);
     this.ws && this.ws.close();
   }
 }

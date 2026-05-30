@@ -115,6 +115,7 @@ export class FileManager extends EventTarget {
 
     let aborted = false;
 
+    try {
     for (let i = 0; i < totalChunks; i++) {
       const channel = this._pm.getChannel(peerId, 'file');
       if (!channel || channel.readyState !== 'open') { aborted = true; break; }
@@ -158,8 +159,10 @@ export class FileManager extends EventTarget {
       // Yield to the event loop so ICE keepalives and UI updates can run between chunks
       await new Promise((r) => setTimeout(r, 0));
     }
-
-    this._outbound.delete(id);
+    } finally {
+      // Always clean up _outbound — even if an unexpected exception throws mid-loop
+      this._outbound.delete(id);
+    }
 
     if (aborted) {
       this.dispatchEvent(new CustomEvent('transfer-aborted', {

@@ -602,8 +602,12 @@ async function sendAllPendingFiles() {
             if (!entry.statusEl.textContent.includes('✓')) entry.statusEl.textContent = 'Sent ✓';
             entry.barEl.style.width = '100%';
         } catch (err) {
-            // transfer-aborted event already updated the UI; catch stops the promise chain
-            log.error('[file] sendFile aborted:', err.message);
+            log.error('[file] sendFile error:', err.message);
+            // transfer-aborted already set the UI for peer-disconnect cases.
+            // For any other unexpected error (file read failure, etc.) update
+            // the bubble here so it never stays frozen at "Sending… X%".
+            const failEntry = activeTransfers.get(id);
+            if (failEntry) failEntry.statusEl.textContent = 'Send failed';
         }
         activeTransfers.delete(id);
     }
