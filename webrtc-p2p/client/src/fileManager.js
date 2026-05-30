@@ -70,6 +70,35 @@ export class FileManager extends EventTarget {
   // before the first progress event fires, avoiding a listener-order race.
   async sendFile(peerId, file, transferId = null) {
     const id = transferId || crypto.randomUUID();
+
+    // Pre-flight: if the 'file' DataChannel is still opening (race between 'chat' and
+    // 'file' channelopen events), wait up to 6 s for it rather than aborting immediately.
+    // Root cause of "peer disconnected" on small files — 'chat' opens first, app marks
+    // peer online, user sends, but 'file' channel readyState is still 'connecting'.
+    const preFlight = this._pm.getChannel(peerId, 'file');
+    if (preFlight && preFlight.readyState === 'connecting') {
+      const opened = await new Promise((resolve) => {
+        const timer   = setTimeout(() => cleanup(false), 6000);
+        const cleanup = (result) => {
+          clearTimeout(timer);
+          preFlight.removeEventListener('open',  onOpen);
+          preFlight.removeEventListener('close', onClose);
+          resolve(result);
+        };
+        const onOpen  = () => cleanup(true);
+        const onClose = () => cleanup(false);
+        preFlight.addEventListener('open',  onOpen);
+        preFlight.addEventListener('close', onClose);
+      });
+      if (!opened) {
+        this.dispatchEvent(new CustomEvent('transfer-aborted', { detail: { id, peerId, outbound: true } }));
+        throw new Error(`sendFile: file channel did not open for ${peerId}`);
+      }
+    } else if (!preFlight || preFlight.readyState !== 'open') {
+      this.dispatchEvent(new CustomEvent('transfer-aborted', { detail: { id, peerId, outbound: true } }));
+      throw new Error(`sendFile: file channel unavailable for ${peerId}`);
+    }
+
     // Stream chunks directly from the File object one at a time (file.slice → arrayBuffer).
     // This avoids loading the entire file into memory upfront, which would block the JS
     // main thread for large videos and starve WebRTC ICE keepalive packets → false disconnect.

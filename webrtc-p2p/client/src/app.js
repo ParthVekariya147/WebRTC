@@ -166,8 +166,13 @@ window.joinRoom = function () {
     peerManager.addEventListener('channelopen', ({ detail: { peerId, label } }) => {
         dbg(`[CHANNEL] ${label} open ← ${peerId}`);
         ensureConv(peerId);
-        conversations[peerId].status = 'online';
-        sysMsg(peerId, `${peerId} joined`);
+        // Show "joined" only once — when the chat channel opens (first user-visible event)
+        if (label === 'chat') sysMsg(peerId, `${peerId} joined`);
+        // Mark online only when BOTH channels are ready — prevents the race where the
+        // 'file' channel is still 'connecting' when the user tries to send a file
+        const chatReady = peerManager.getChannel(peerId, 'chat')?.readyState === 'open';
+        const fileReady = peerManager.getChannel(peerId, 'file')?.readyState === 'open';
+        if (chatReady && fileReady) conversations[peerId].status = 'online';
         renderPeerList();
         if (activePeerId === peerId) refreshChatTop(peerId);
     });
