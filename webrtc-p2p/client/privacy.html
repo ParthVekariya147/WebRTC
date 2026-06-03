@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — P2P Nexus</title>
+  <meta name="description" content="P2P Nexus Privacy Policy — peer-to-peer architecture, no server-side content storage.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent:   #0084ff;
+      --accent-d: #006fd6;
+      --text:     #0f172a;
+      --muted:    #64748b;
+      --border:   #e2e8f0;
+      --card-bg:  #f8fafc;
+      --white:    #ffffff;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--white); color: var(--text); line-height: 1.6; }
+
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1100px; margin: 0 auto; padding: 0 24px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 700; color: var(--text); text-decoration: none; }
+    .logo-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; color: #fff; font-size: .85rem; }
+    .btn-open { padding: 8px 18px; border-radius: 8px; background: var(--accent); color: #fff; font-size: .875rem; font-weight: 600; text-decoration: none; transition: background .15s; display: flex; align-items: center; gap: 6px; }
+    .btn-open:hover { background: var(--accent-d); }
+
+    .doc-wrap { max-width: 760px; margin: 0 auto; padding: 56px 24px 80px; }
+
+    .legal-notice {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px;
+      padding: 14px 18px; margin-bottom: 36px; font-size: .88rem; color: #92400e; line-height: 1.5;
+    }
+    .legal-notice i { margin-right: 6px; }
+
+    h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -.03em; margin-bottom: 6px; }
+    .meta { font-size: .85rem; color: var(--muted); margin-bottom: 40px; }
+
+    h2 { font-size: 1.15rem; font-weight: 700; margin: 36px 0 10px; color: var(--text); }
+    p  { margin-bottom: 14px; font-size: .95rem; color: #1e293b; }
+    ul, ol { margin: 10px 0 14px 22px; }
+    li { font-size: .95rem; color: #1e293b; margin-bottom: 4px; }
+    em { font-style: normal; font-weight: 600; }
+
+    table { width: 100%; border-collapse: collapse; margin: 16px 0 20px; font-size: .88rem; }
+    th { background: var(--card-bg); text-align: left; padding: 10px 14px; border: 1px solid var(--border); font-weight: 600; }
+    td { padding: 9px 14px; border: 1px solid var(--border); color: #334155; vertical-align: top; }
+    tr:nth-child(even) td { background: var(--card-bg); }
+
+    .bracket { color: var(--accent); font-weight: 600; }
+
+    footer { padding: 20px 24px; text-align: center; border-top: 1px solid var(--border); font-size: .8rem; color: var(--muted); }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 1.7rem; }
+      .doc-wrap { padding: 36px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="/">
+      <span class="logo-icon"><i class="fa-solid fa-bolt"></i></span>
+      P2P Nexus
+    </a>
+    <a class="btn-open" href="/app.html">
+      Open App <i class="fa-solid fa-arrow-right"></i>
+    </a>
+  </div>
+</nav>
+
+<div class="doc-wrap">
+
+  <div class="legal-notice">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <strong>Not legal advice.</strong> This is a draft tailored to the app's P2P architecture.
+    Have a lawyer review before launch and confirm jurisdiction-specific obligations (GDPR, CCPA, HIPAA if you target healthcare).
+    Replace all <span class="bracket">[BRACKETS]</span> before publishing.
+  </div>
+
+  <h1>Privacy Policy</h1>
+  <p class="meta">
+    Last updated: <span class="bracket">[DATE]</span> &nbsp;·&nbsp;
+    Service: <span class="bracket">[APP NAME]</span> ("the Service"), operated by <span class="bracket">[COMPANY]</span> ("we", "us").
+  </p>
+
+  <h2>1. The short version</h2>
+  <p>
+    The Service is peer-to-peer. Your video, audio, files, and chat messages travel
+    <em>directly between participants</em> over encrypted WebRTC channels.
+    <em>We never receive, store, or have access to that content.</em>
+    Our server only helps participants find each other.
+  </p>
+
+  <h2>2. What we process</h2>
+  <table>
+    <thead>
+      <tr><th>Data</th><th>Why</th><th>Stored?</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Room ID</td><td>Route the connection handshake</td><td>In memory only, deleted when room empties</td></tr>
+      <tr><td>Temporary peer ID</td><td>Identify participants during a session</td><td>In memory only, ephemeral</td></tr>
+      <tr><td>IP address (at connect time)</td><td>Establish the WebSocket signaling connection</td><td>Not persisted by us; may appear in standard infra logs</td></tr>
+      <tr><td>Connection timestamps</td><td>Operate and debug the signaling service</td><td>Short-term operational logs only</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. What we do NOT collect or store</h2>
+  <ul>
+    <li>Video or audio streams.</li>
+    <li>Files you transfer.</li>
+    <li>Chat message content (chat is in-memory on each device and cleared when the tab closes).</li>
+    <li>Accounts, names, or profiles (v1 has no login).</li>
+  </ul>
+  <p>
+    The signaling server relays only SDP and ICE handshake messages.
+    Once a peer connection is established, the server is no longer in the data path.
+  </p>
+
+  <h2>4. Encryption</h2>
+  <p>
+    All media is encrypted with SRTP; all data channels (chat, files) are encrypted with DTLS.
+    This is enforced by WebRTC and cannot be disabled.
+  </p>
+
+  <h2>5. TURN relay servers</h2>
+  <p>
+    If a direct connection is blocked by your network, traffic may be relayed through a TURN server.
+    The relay forwards <em>encrypted</em> packets and cannot read their contents.
+    TURN providers may process IP/connection metadata to route packets.
+    Provider(s): <span class="bracket">[TURN PROVIDER]</span>.
+  </p>
+
+  <h2>6. Third-party infrastructure</h2>
+  <ul>
+    <li><strong>Signaling hosting:</strong> <span class="bracket">[Render]</span> — processes connection metadata only.</li>
+    <li><strong>Client hosting / CDN:</strong> <span class="bracket">[Vercel]</span> — serves the app; standard request logs.</li>
+    <li><strong>STUN/TURN:</strong> <span class="bracket">[Google STUN / your TURN provider]</span>.</li>
+  </ul>
+  <p>We do not sell or share personal data with advertisers. The Service contains no ads or third-party tracking.</p>
+
+  <h2>7. Cookies &amp; local storage</h2>
+  <p>
+    The app uses browser storage only for session function (e.g., temporary peer ID).
+    No advertising or analytics cookies in v1. <span class="bracket">[Update if you add analytics.]</span>
+  </p>
+
+  <h2>8. Data retention</h2>
+  <p>
+    We retain no user content. Operational logs containing connection metadata are kept for
+    <span class="bracket">[N]</span> days, then deleted.
+  </p>
+
+  <h2>9. Your rights (GDPR / CCPA)</h2>
+  <p>
+    Because we hold no persistent personal data tied to you, there is typically nothing to export or delete.
+    For requests or questions about metadata in operational logs, contact <span class="bracket">[PRIVACY EMAIL]</span>.
+    EU/UK users have rights to access, rectification, erasure, and to lodge a complaint with a supervisory authority.
+    California users have rights under the CCPA/CPRA. We do not sell personal information.
+  </p>
+
+  <h2>10. Children</h2>
+  <p>
+    The Service is not directed to children under <span class="bracket">[13/16, per jurisdiction]</span>.
+    We do not knowingly process their data.
+  </p>
+
+  <h2>11. Changes</h2>
+  <p>
+    We may update this policy. Material changes will be posted at <span class="bracket">[URL]</span> with a new "Last updated" date.
+  </p>
+
+  <h2>12. Contact</h2>
+  <p><span class="bracket">[PRIVACY EMAIL]</span> &nbsp;·&nbsp; <span class="bracket">[COMPANY ADDRESS]</span></p>
+
+</div>
+
+<footer>
+  P2P Nexus &nbsp;·&nbsp;
+  <a href="/privacy.html">Privacy Policy</a> &nbsp;·&nbsp;
+  <a href="/tos.html">Terms of Service</a> &nbsp;·&nbsp;
+  Built on WebRTC
+</footer>
+
+</body>
+</html>

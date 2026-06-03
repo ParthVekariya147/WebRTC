@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service — P2P Nexus</title>
+  <meta name="description" content="P2P Nexus Terms of Service.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent:   #0084ff;
+      --accent-d: #006fd6;
+      --text:     #0f172a;
+      --muted:    #64748b;
+      --border:   #e2e8f0;
+      --card-bg:  #f8fafc;
+      --white:    #ffffff;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--white); color: var(--text); line-height: 1.6; }
+
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1100px; margin: 0 auto; padding: 0 24px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 700; color: var(--text); text-decoration: none; }
+    .logo-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; color: #fff; font-size: .85rem; }
+    .btn-open { padding: 8px 18px; border-radius: 8px; background: var(--accent); color: #fff; font-size: .875rem; font-weight: 600; text-decoration: none; transition: background .15s; display: flex; align-items: center; gap: 6px; }
+    .btn-open:hover { background: var(--accent-d); }
+
+    .doc-wrap { max-width: 760px; margin: 0 auto; padding: 56px 24px 80px; }
+
+    .legal-notice {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px;
+      padding: 14px 18px; margin-bottom: 36px; font-size: .88rem; color: #92400e; line-height: 1.5;
+    }
+    .legal-notice i { margin-right: 6px; }
+
+    h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -.03em; margin-bottom: 6px; }
+    .meta { font-size: .85rem; color: var(--muted); margin-bottom: 40px; }
+
+    h2 { font-size: 1.15rem; font-weight: 700; margin: 36px 0 10px; color: var(--text); }
+    p  { margin-bottom: 14px; font-size: .95rem; color: #1e293b; }
+    ul, ol { margin: 10px 0 14px 22px; }
+    li { font-size: .95rem; color: #1e293b; margin-bottom: 4px; }
+    em { font-style: normal; font-weight: 600; }
+
+    .bracket { color: var(--accent); font-weight: 600; }
+
+    footer { padding: 20px 24px; text-align: center; border-top: 1px solid var(--border); font-size: .8rem; color: var(--muted); }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 1.7rem; }
+      .doc-wrap { padding: 36px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="/">
+      <span class="logo-icon"><i class="fa-solid fa-bolt"></i></span>
+      P2P Nexus
+    </a>
+    <a class="btn-open" href="/app.html">
+      Open App <i class="fa-solid fa-arrow-right"></i>
+    </a>
+  </div>
+</nav>
+
+<div class="doc-wrap">
+
+  <div class="legal-notice">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <strong>Not legal advice.</strong> This is a draft tailored to the app's P2P architecture.
+    Have a lawyer review before launch and confirm jurisdiction-specific obligations (GDPR, CCPA, HIPAA if you target healthcare).
+    Replace all <span class="bracket">[BRACKETS]</span> before publishing.
+  </div>
+
+  <h1>Terms of Service</h1>
+  <p class="meta">Last updated: <span class="bracket">[DATE]</span></p>
+
+  <h2>1. Acceptance</h2>
+  <p>
+    By using <span class="bracket">[APP NAME]</span> you agree to these Terms.
+    If you do not agree, do not use the Service.
+  </p>
+
+  <h2>2. What the Service is</h2>
+  <p>
+    A peer-to-peer real-time communication tool (video, audio, file transfer, chat) built on WebRTC.
+    Communication occurs directly between participants; we provide a signaling server to initiate connections
+    and do not handle or store your content.
+  </p>
+
+  <h2>3. Eligibility</h2>
+  <p>
+    You must be at least <span class="bracket">[18 / age of majority in your jurisdiction]</span>,
+    or have consent from a parent/guardian if permitted.
+    By using the Service you represent you meet this requirement.
+  </p>
+
+  <h2>4. Acceptable use</h2>
+  <p>You agree not to use the Service to:</p>
+  <ul>
+    <li>transmit unlawful, infringing, harassing, or harmful content;</li>
+    <li>violate others' privacy or intellectual property;</li>
+    <li>distribute malware or attempt to disrupt or overload the signaling server;</li>
+    <li>circumvent the participant limit or security controls.</li>
+  </ul>
+  <p>We may restrict access for violations.</p>
+
+  <h2>5. Recording &amp; consent</h2>
+  <p>
+    The Service does not record sessions <span class="bracket">[confirm against your final feature set]</span>.
+    If you record a session by any means, <em>you are solely responsible</em> for obtaining all
+    legally required consents from other participants under applicable law.
+  </p>
+
+  <h2>6. Peer-to-peer nature &amp; assumption of risk</h2>
+  <p>Because connections are direct between participants:</p>
+  <ul>
+    <li>Other participants may see your IP address as part of normal WebRTC operation.</li>
+    <li>Connection quality depends on participants' networks and may fail on restrictive networks.</li>
+    <li>We cannot moderate, intercept, or retrieve content exchanged between peers.</li>
+  </ul>
+  <p>You accept these characteristics as inherent to the Service.</p>
+
+  <h2>7. No warranty</h2>
+  <p>
+    The Service is provided "AS IS" and "AS AVAILABLE", without warranties of any kind, express or implied,
+    including merchantability, fitness for a particular purpose, and non-infringement.
+    We do not warrant uninterrupted or error-free operation.
+  </p>
+
+  <h2>8. Limitation of liability</h2>
+  <p>
+    To the maximum extent permitted by law, <span class="bracket">[COMPANY]</span> is not liable for
+    indirect, incidental, special, consequential, or punitive damages, or for any loss of data, profits,
+    or content exchanged between peers. Our total liability shall not exceed
+    <span class="bracket">[the amount you paid in the prior 12 months / USD 100]</span>.
+  </p>
+
+  <h2>9. Intellectual property</h2>
+  <p>
+    The Service software, branding, and content (excluding user-exchanged content) are owned by
+    <span class="bracket">[COMPANY]</span> and protected by law. You receive a limited, revocable,
+    non-exclusive license to use the Service.
+  </p>
+
+  <h2>10. Termination</h2>
+  <p>
+    We may suspend or terminate access at any time for violation of these Terms or to protect the Service.
+    You may stop using the Service at any time.
+  </p>
+
+  <h2>11. Governing law</h2>
+  <p>
+    These Terms are governed by the laws of <span class="bracket">[JURISDICTION]</span>,
+    without regard to conflict-of-law rules.
+    Disputes shall be resolved in the courts of <span class="bracket">[VENUE]</span>.
+  </p>
+
+  <h2>12. Changes</h2>
+  <p>
+    We may modify these Terms. Continued use after changes constitutes acceptance.
+    Latest version at <span class="bracket">[URL]</span>.
+  </p>
+
+  <h2>13. Contact</h2>
+  <p><span class="bracket">[SUPPORT EMAIL]</span> &nbsp;·&nbsp; <span class="bracket">[COMPANY ADDRESS]</span></p>
+
+</div>
+
+<footer>
+  P2P Nexus &nbsp;·&nbsp;
+  <a href="/privacy.html">Privacy Policy</a> &nbsp;·&nbsp;
+  <a href="/tos.html">Terms of Service</a> &nbsp;·&nbsp;
+  Built on WebRTC
+</footer>
+
+</body>
+</html>
