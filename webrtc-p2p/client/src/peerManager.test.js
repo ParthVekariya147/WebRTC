@@ -358,3 +358,56 @@ describe('PeerManager — safeSend', () => {
         expect(pm.safeSend('bob', 'chat', 'hello')).toBe(false);
     });
 });
+
+// ── setLocalStream() — Phase 5A video track wiring ────────────────────────
+
+describe('PeerManager — setLocalStream()', () => {
+    // Shared mock function assigned to the prototype so all instances use it.
+    // Count calls on THIS reference — do not reduce per-instance (they all point
+    // to the same fn, so per-instance counts would double-count).
+    let addTrackMock;
+    beforeEach(() => {
+        addTrackMock = vi.fn();
+        MockRTCPeerConnection.prototype.addTrack = addTrackMock;
+    });
+
+    it('stores the stream and adds tracks to all existing connections', async () => {
+        const sig = makeSignaling('alice');
+        const pm  = new PeerManager('alice', sig);
+
+        sig.emit('room-peers', { peers: ['bob', 'carol'] });
+        await flush();
+
+        const stream = { getTracks: () => [{ kind: 'video' }, { kind: 'audio' }] };
+        pm.setLocalStream(stream);
+
+        expect(pm.localStream).toBe(stream);
+        // 2 peers × 2 tracks = 4 addTrack calls
+        expect(addTrackMock).toHaveBeenCalledTimes(4);
+    });
+
+    it('new connections created after setLocalStream get tracks immediately', async () => {
+        const sig = makeSignaling('alice');
+        const pm  = new PeerManager('alice', sig);
+
+        const stream = { getTracks: () => [{ kind: 'video' }, { kind: 'audio' }] };
+        pm.setLocalStream(stream);
+
+        // New peer joins AFTER stream is set — _createPeerConnection sees localStream
+        sig.emit('room-peers', { peers: ['bob'] });
+        await flush();
+
+        // 1 peer × 2 tracks = 2 addTrack calls
+        expect(addTrackMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('setLocalStream(null) clears the stream without throwing', async () => {
+        const sig = makeSignaling('alice');
+        const pm  = new PeerManager('alice', sig);
+
+        const stream = { getTracks: () => [] };
+        pm.setLocalStream(stream);
+        expect(() => pm.setLocalStream(null)).not.toThrow();
+        expect(pm.localStream).toBeNull();
+    });
+});

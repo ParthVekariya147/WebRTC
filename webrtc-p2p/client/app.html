@@ -477,6 +477,117 @@
         }
         .lightbox-close:hover { background: rgba(255,255,255,.28); }
 
+        /* ── Phase 5A: Video overlay ── */
+        .video-overlay {
+            position: fixed; inset: 0; z-index: 100;
+            background: #0b0f14;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Video grid — auto-layout by tile count */
+        .video-grid {
+            flex: 1; display: grid; gap: 4px; padding: 8px;
+            align-content: center; justify-items: stretch; overflow: hidden;
+        }
+        .video-grid[data-count="0"],
+        .video-grid[data-count="1"] { grid-template-columns: 1fr; }
+        .video-grid[data-count="2"] { grid-template-columns: 1fr 1fr; }
+        .video-grid[data-count="3"],
+        .video-grid[data-count="4"] { grid-template-columns: 1fr 1fr; }
+        .video-grid[data-count="5"],
+        .video-grid[data-count="6"] { grid-template-columns: 1fr 1fr 1fr; }
+
+        .video-tile {
+            position: relative; background: #1a1f27;
+            border-radius: 10px; overflow: hidden;
+            aspect-ratio: 16/9; max-height: calc(50vh - 52px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .video-tile video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .video-tile-label {
+            position: absolute; bottom: 8px; left: 10px;
+            background: rgba(0,0,0,.55); color: #fff;
+            padding: 2px 8px; border-radius: 4px;
+            font-size: .72rem; font-weight: 600; letter-spacing: .02em;
+        }
+        .video-tile.self-tile { opacity: .92; }
+        .video-tile.camera-off video { visibility: hidden; }
+        .video-tile.camera-off::before {
+            content: '\f007'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+            font-size: 3rem; color: #555; position: absolute;
+        }
+
+        /* Video controls bar */
+        .video-controls {
+            height: 72px; flex-shrink: 0;
+            background: rgba(0,0,0,.65);
+            display: flex; align-items: center; justify-content: center; gap: 14px;
+            padding: 0 20px;
+        }
+        .vctr-btn {
+            min-width: 48px; height: 48px; border-radius: 24px;
+            border: none; cursor: pointer; font-size: 1.05rem;
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+            color: #fff; background: rgba(255,255,255,.18);
+            transition: background .15s, transform .1s; font-family: inherit;
+            padding: 0 14px;
+        }
+        .vctr-btn:hover { background: rgba(255,255,255,.3); transform: scale(1.06); }
+        .vctr-btn.vctr-muted { background: rgba(220,38,38,.7); }
+        .vctr-btn.end-call { background: #dc2626; }
+        .vctr-btn.end-call:hover { background: #b91c1c; }
+        .chat-vctr-btn { font-size: .8rem; }
+        .chat-vctr-btn span { display: inline; }
+
+        /* Chat drawer — slides in from the right */
+        .video-chat-drawer {
+            position: fixed; top: 0; bottom: 72px; right: -340px; width: 320px;
+            background: var(--bg-panel); box-shadow: -4px 0 24px rgba(0,0,0,.35);
+            transition: right .28s cubic-bezier(.4,0,.2,1);
+            display: flex; flex-direction: column; z-index: 110;
+            border-radius: 12px 0 0 12px;
+        }
+        .video-chat-drawer.open { right: 0; }
+
+        .video-drawer-header {
+            padding: 12px 14px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            font-weight: 600; font-size: .9rem; color: var(--text-main); flex-shrink: 0;
+        }
+        .video-drawer-messages {
+            flex: 1; overflow-y: auto; padding: 10px 12px;
+            display: flex; flex-direction: column; gap: 4px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .video-drawer-input {
+            padding: 10px 12px; border-top: 1px solid var(--border);
+            display: flex; gap: 8px; flex-shrink: 0;
+        }
+        .video-drawer-input input {
+            flex: 1; background: var(--bg-input); border: 1.5px solid transparent;
+            border-radius: 20px; padding: 8px 14px;
+            font-size: .9rem; outline: none; font-family: inherit;
+            color: var(--text-main); transition: border-color .18s;
+        }
+        .video-drawer-input input:focus { border-color: var(--accent); }
+        .video-drawer-input button {
+            width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+            background: var(--accent); border: none; color: #fff;
+            cursor: pointer; font-size: .9rem;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        @media (max-width: 640px) {
+            .video-grid[data-count="2"] { grid-template-columns: 1fr; }
+            .video-tile { max-height: 38vh; }
+            .video-controls { height: 64px; gap: 10px; padding: 0 12px; }
+            .vctr-btn { min-width: 44px; height: 44px; font-size: .95rem; padding: 0 10px; }
+            .chat-vctr-btn span { display: none; }
+            .video-chat-drawer { bottom: 64px; width: min(320px, 100vw); right: -100vw; border-radius: 0; }
+            .video-chat-drawer.open { right: 0; }
+        }
+
         /* Scrollbar */
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -709,10 +820,14 @@
                 <i class="fa-solid fa-arrow-left"></i>
             </button>
             <div class="avatar" id="chat-top-avatar"><i class="fa-solid fa-user"></i></div>
-            <div class="chat-top-info">
+            <div class="chat-top-info" style="flex:1">
                 <h2 id="active-peer-name">Peer</h2>
                 <p id="active-peer-status">Connecting…</p>
             </div>
+            <button class="icon-btn" id="video-call-btn" onclick="startBroadcast()"
+                    title="Start video call" style="display:none; color:var(--online)">
+                <i class="fa-solid fa-video"></i>
+            </button>
         </div>
 
         <div id="ice-bar"><i class="fa-solid fa-circle-notch fa-spin"></i> &nbsp;Establishing direct connection…</div>
@@ -751,6 +866,53 @@
             </div>
 
             <button class="send-btn" onclick="window.sendMessage()" title="Send">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── VIDEO OVERLAY (Phase 5A) ── -->
+<div id="video-overlay" class="video-overlay" style="display:none">
+
+    <!-- Video grid -->
+    <div id="video-grid" class="video-grid" data-count="0"></div>
+
+    <!-- Controls bar -->
+    <div class="video-controls">
+        <button class="vctr-btn chat-vctr-btn" id="video-chat-btn"
+                onclick="toggleVideoChat()" title="Chat">
+            <i class="fa-solid fa-comment"></i>
+            <span>Chat</span>
+        </button>
+        <button class="vctr-btn" id="video-mute-btn"
+                onclick="toggleMic()" title="Mute mic">
+            <i class="fa-solid fa-microphone"></i>
+        </button>
+        <button class="vctr-btn" id="video-camera-btn"
+                onclick="toggleCamera()" title="Pause camera">
+            <i class="fa-solid fa-video"></i>
+        </button>
+        <button class="vctr-btn end-call" id="video-stop-btn"
+                onclick="stopBroadcast()" title="End broadcast">
+            <i class="fa-solid fa-phone-slash"></i>
+        </button>
+    </div>
+
+    <!-- Chat drawer -->
+    <div id="video-chat-drawer" class="video-chat-drawer">
+        <div class="video-drawer-header">
+            <span>Chat</span>
+            <button class="icon-btn" onclick="toggleVideoChat()" title="Close chat"
+                    style="width:30px;height:30px;font-size:.9rem">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="video-drawer-messages" id="video-drawer-messages"></div>
+        <div class="video-drawer-input">
+            <input type="text" id="video-chat-input" placeholder="Type a message…"
+                   onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendVideoChat();}">
+            <button onclick="sendVideoChat()">
                 <i class="fa-solid fa-paper-plane"></i>
             </button>
         </div>

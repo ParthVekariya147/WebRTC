@@ -1,9 +1,10 @@
-// app.js — Phase 4.5: sender preview, multi-file staging, inline receive previews, drag-and-drop
+// app.js — Phase 5A: one-way video/audio broadcast (builds on Phase 4.5)
 import { SIGNALING_URL } from './config.js';
 import { SignalingClient } from './signalingClient.js';
 import { PeerManager } from './peerManager.js';
 import { ChatManager } from './chatManager.js';
 import { FileManager } from './fileManager.js';
+import { getLocalStream, stopStream, MediaError } from './mediaManager.js';
 import { log } from './logger.js';
 
 if (typeof location !== 'undefined'
@@ -28,6 +29,9 @@ let pendingFiles = [];  // [{ id, file, previewUrl }]
 let joined = false;
 const activeTransfers = new Map();
 const _blobUrls = [];
+
+// Phase 5A — video state
+let localStream = null; // null when not broadcasting
 
 // ── Pure helpers (exported for tests) ──────────────────────────────────────
 export function fileCategory(mime = '', name = '') {
@@ -195,9 +199,16 @@ window.joinRoom = function () {
         if (activePeerId === peerId) refreshChatTop(peerId);
     });
 
+    peerManager.addEventListener('track', ({ detail: { peerId, stream } }) => {
+        dbg(`[TRACK] received from ${peerId}`);
+        addVideoTile(peerId, stream, false);
+        showVideoOverlay(false);
+    });
+
     peerManager.addEventListener('peerleft', ({ detail: { peerId } }) => {
         dbg(`[PEER LEFT] ${peerId}`);
         fileManager?.peerLeft(peerId);
+        removeVideoTile(peerId);
         if (!conversations[peerId]) return;
         conversations[peerId].status = 'offline';
         sysMsg(peerId, `${peerId} left`);
@@ -233,11 +244,16 @@ window.joinRoom = function () {
         conversations[convKey].messages.push(bubble);
         if (activePeerId === convKey) appendBubble(bubble);
         else if (!isMe) conversations[convKey].unread++;
+        // Mirror into the video drawer if it's open for this conversation
+        const drawer = document.getElementById('video-chat-drawer');
+        if (drawer?.classList.contains('open') && convKey === activePeerId) appendVideoDrawerBubble(bubble);
         renderPeerList();
     });
 };
 
 window.addEventListener('beforeunload', () => {
+    stopStream(localStream);
+    localStream = null;
     peerManager?.destroy();
     signaling?.destroy();
     _blobUrls.forEach(url => URL.revokeObjectURL(url));
@@ -413,6 +429,7 @@ function refreshChatTop(peerId) {
     const nameEl = document.getElementById('active-peer-name');
     const st     = document.getElementById('active-peer-status');
     const av     = document.getElementById('chat-top-avatar');
+    const callBtn = document.getElementById('video-call-btn');
 
     if (isRoom) {
         const onlineCount = Object.keys(conversations)
@@ -421,6 +438,7 @@ function refreshChatTop(peerId) {
         st.textContent = onlineCount ? `${onlineCount} peer${onlineCount > 1 ? 's' : ''} connected` : 'No peers connected';
         st.className = onlineCount ? 'online' : '';
         av.className = 'avatar group';
+        if (callBtn) callBtn.style.display = 'none';
         return;
     }
 
@@ -429,6 +447,7 @@ function refreshChatTop(peerId) {
     st.textContent = isOnline ? 'Online — Direct P2P' : (conv?.status === 'connecting' ? 'Connecting…' : 'Offline');
     st.className = isOnline ? 'online' : (conv?.status === 'offline' ? 'offline' : '');
     av.className = `avatar ${isOnline ? 'online' : ''}`;
+    if (callBtn) callBtn.style.display = (isOnline && !localStream) ? '' : 'none';
 }
 
 // ── Re-render messages area from stored conv.messages ──────────────────────
@@ -780,6 +799,175 @@ window.closeLightbox = function () {
     document.getElementById('lightbox').classList.remove('visible');
     document.getElementById('lightbox-img').src = '';
 };
+
+// ── Phase 5A: Video overlay ────────────────────────────────────────────────
+
+window.startBroadcast = async function () {
+    if (!peerManager) return;
+    const btn = document.getElementById('video-call-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>'; }
+
+    try {
+        localStream = await getLocalStream({ video: true, audio: true });
+        peerManager.setLocalStream(localStream);
+        addVideoTile('__self__', localStream, true);
+        showVideoOverlay(true);
+    } catch (err) {
+        const msg = err instanceof MediaError ? err.message : 'Could not access camera/microphone.';
+        if (activePeerId) sysMsg(activePeerId, msg);
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-video"></i>'; }
+    }
+};
+
+window.stopBroadcast = function () {
+    stopStream(localStream);
+    localStream = null;
+    peerManager?.setLocalStream(null);
+    document.getElementById('video-grid').innerHTML = '';
+    document.getElementById('video-chat-drawer').classList.remove('open');
+    hideVideoOverlay();
+    if (activePeerId) refreshChatTop(activePeerId);
+};
+
+window.toggleMic = function () {
+    if (!localStream) return;
+    const track = localStream.getAudioTracks()[0];
+    if (!track) return;
+    track.enabled = !track.enabled;
+    const btn = document.getElementById('video-mute-btn');
+    if (btn) {
+        btn.innerHTML = track.enabled
+            ? '<i class="fa-solid fa-microphone"></i>'
+            : '<i class="fa-solid fa-microphone-slash"></i>';
+        btn.classList.toggle('vctr-muted', !track.enabled);
+    }
+};
+
+window.toggleCamera = function () {
+    if (!localStream) return;
+    const track = localStream.getVideoTracks()[0];
+    if (!track) return;
+    track.enabled = !track.enabled;
+    const btn = document.getElementById('video-camera-btn');
+    if (btn) {
+        btn.innerHTML = track.enabled
+            ? '<i class="fa-solid fa-video"></i>'
+            : '<i class="fa-solid fa-video-slash"></i>';
+        btn.classList.toggle('vctr-muted', !track.enabled);
+    }
+    // Grey out the self-tile when camera is paused
+    const selfTile = document.querySelector('.video-tile.self-tile');
+    if (selfTile) selfTile.classList.toggle('camera-off', !track.enabled);
+};
+
+window.toggleVideoChat = function () {
+    const drawer = document.getElementById('video-chat-drawer');
+    const opening = !drawer.classList.contains('open');
+    drawer.classList.toggle('open', opening);
+    if (opening && activePeerId) syncVideoDrawer();
+};
+
+window.sendVideoChat = function () {
+    if (!activePeerId || activePeerId === ROOM_ID || !chatManager) return;
+    const input = document.getElementById('video-chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    const conv = conversations[activePeerId];
+    if (conv?.status !== 'online') return;
+    const sent = peerManager.safeSend(activePeerId, 'chat', JSON.stringify({
+        type: 'chat', id: crypto.randomUUID(), from: myName, to: activePeerId, text, ts: Date.now(),
+    }));
+    if (!sent) return;
+    const bubble = { sender: 'me', text, time: fmt(Date.now()) };
+    conv.messages.push(bubble);
+    appendVideoDrawerBubble(bubble);
+    renderPeerList();
+};
+
+function addVideoTile(peerId, stream, isSelf) {
+    const grid = document.getElementById('video-grid');
+    if (!grid) return;
+    removeVideoTile(peerId);
+
+    const tile = document.createElement('div');
+    tile.className = `video-tile${isSelf ? ' self-tile' : ''}`;
+    tile.dataset.peer = peerId;
+
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.autoplay = true;
+    video.playsInline = true;
+    if (isSelf) video.muted = true;
+
+    const label = document.createElement('div');
+    label.className = 'video-tile-label';
+    label.textContent = isSelf ? 'You' : peerId;
+
+    tile.appendChild(video);
+    tile.appendChild(label);
+    grid.appendChild(tile);
+    updateVideoCount();
+}
+
+function removeVideoTile(peerId) {
+    const grid = document.getElementById('video-grid');
+    if (!grid) return;
+    // CSS.escape is safe but not available in all test envs; use querySelector with data attr
+    const el = Array.from(grid.querySelectorAll('.video-tile')).find(t => t.dataset.peer === peerId);
+    if (el) el.remove();
+    updateVideoCount();
+
+    // If no tiles remain and we're not broadcasting, hide the overlay
+    if (grid.childElementCount === 0 && !localStream) hideVideoOverlay();
+}
+
+function updateVideoCount() {
+    const grid = document.getElementById('video-grid');
+    if (grid) grid.dataset.count = grid.childElementCount;
+}
+
+function showVideoOverlay(isBroadcaster) {
+    const overlay = document.getElementById('video-overlay');
+    if (!overlay) return;
+    overlay.style.display = 'flex';
+    document.getElementById('video-stop-btn').style.display = isBroadcaster ? '' : 'none';
+    document.getElementById('video-mute-btn').style.display  = isBroadcaster ? '' : 'none';
+    document.getElementById('video-camera-btn').style.display = isBroadcaster ? '' : 'none';
+}
+
+function hideVideoOverlay() {
+    const overlay = document.getElementById('video-overlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function syncVideoDrawer() {
+    const area = document.getElementById('video-drawer-messages');
+    if (!area || !activePeerId) return;
+    area.innerHTML = '';
+    (conversations[activePeerId]?.messages || []).forEach(m => {
+        if (!m.sys) appendVideoDrawerBubble(m);
+    });
+    area.scrollTop = area.scrollHeight;
+}
+
+function appendVideoDrawerBubble(msg) {
+    const area = document.getElementById('video-drawer-messages');
+    if (!area) return;
+    const wrap = document.createElement('div');
+    wrap.className = `message ${msg.sender === 'me' ? 'out' : 'in'}`;
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    if (msg.type === 'file') {
+        bubble.innerHTML = `<i class="fa-solid fa-file"></i> ${esc(msg.fileName || '')}`;
+    } else {
+        bubble.innerHTML = `<span>${esc(msg.text || '')}</span>`;
+    }
+    wrap.appendChild(bubble);
+    area.appendChild(wrap);
+    area.scrollTop = area.scrollHeight;
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 export function fmt(ts) {

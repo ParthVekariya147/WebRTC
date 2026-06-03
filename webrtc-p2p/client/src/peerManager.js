@@ -253,6 +253,7 @@ export class PeerManager extends EventTarget {
 
   setLocalStream(stream) {
     this.localStream = stream;
+    if (!stream) return;
     this.connections.forEach((pc) => {
       stream.getTracks().forEach((t) => pc.addTrack(t, stream));
     });
