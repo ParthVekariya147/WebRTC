@@ -1,7 +1,7 @@
 // app.test.js — tests for pure helpers exported from app.js
 // Focus: esc() XSS prevention (L1 treated as security fix)
 import { describe, it, expect } from 'vitest';
-import { esc, fmt, fileCategory, fmtSize, fileSidebarLabel } from './app.js';
+import { esc, fmt, fileCategory, fmtSize, fileSidebarLabel, buildFileMessage } from './app.js';
 
 // ── esc() — XSS prevention ─────────────────────────────────────────────────
 
@@ -182,43 +182,43 @@ describe('fmtSize() — byte size formatting', () => {
 
 describe('fileSidebarLabel() — sidebar file preview label', () => {
     it('shows photo icon for images', () => {
-        expect(fileSidebarLabel({ mime: 'image/jpeg', name: 'photo.jpg' })).toBe('📷 photo.jpg');
-        expect(fileSidebarLabel({ mime: 'image/png',  name: 'pic.png'   })).toBe('📷 pic.png');
+        expect(fileSidebarLabel({ mimeType: 'image/jpeg', fileName: 'photo.jpg' })).toBe('📷 photo.jpg');
+        expect(fileSidebarLabel({ mimeType: 'image/png',  fileName: 'pic.png'   })).toBe('📷 pic.png');
     });
 
     it('shows video icon for videos', () => {
-        expect(fileSidebarLabel({ mime: 'video/mp4',  name: 'clip.mp4'  })).toBe('🎥 clip.mp4');
-        expect(fileSidebarLabel({ mime: 'video/webm', name: 'film.webm' })).toBe('🎥 film.webm');
+        expect(fileSidebarLabel({ mimeType: 'video/mp4',  fileName: 'clip.mp4'  })).toBe('🎥 clip.mp4');
+        expect(fileSidebarLabel({ mimeType: 'video/webm', fileName: 'film.webm' })).toBe('🎥 film.webm');
     });
 
     it('shows audio icon for audio', () => {
-        expect(fileSidebarLabel({ mime: 'audio/mpeg', name: 'song.mp3' })).toBe('🎵 song.mp3');
-        expect(fileSidebarLabel({ mime: 'audio/wav',  name: 'beat.wav' })).toBe('🎵 beat.wav');
+        expect(fileSidebarLabel({ mimeType: 'audio/mpeg', fileName: 'song.mp3' })).toBe('🎵 song.mp3');
+        expect(fileSidebarLabel({ mimeType: 'audio/wav',  fileName: 'beat.wav' })).toBe('🎵 beat.wav');
     });
 
     it('shows document icon for PDFs', () => {
-        expect(fileSidebarLabel({ mime: 'application/pdf', name: 'doc.pdf' })).toBe('📄 doc.pdf');
+        expect(fileSidebarLabel({ mimeType: 'application/pdf', fileName: 'doc.pdf' })).toBe('📄 doc.pdf');
     });
 
     it('shows attachment icon for other file types', () => {
-        expect(fileSidebarLabel({ mime: 'application/zip', name: 'archive.zip' })).toBe('📎 archive.zip');
-        expect(fileSidebarLabel({ mime: 'text/plain',       name: 'notes.txt'  })).toBe('📎 notes.txt');
+        expect(fileSidebarLabel({ mimeType: 'application/zip', fileName: 'archive.zip' })).toBe('📎 archive.zip');
+        expect(fileSidebarLabel({ mimeType: 'text/plain',       fileName: 'notes.txt'  })).toBe('📎 notes.txt');
     });
 
     it('never returns a string containing "undefined"', () => {
-        expect(fileSidebarLabel({ mime: null,      name: null      })).not.toContain('undefined');
-        expect(fileSidebarLabel({ mime: undefined, name: undefined })).not.toContain('undefined');
+        expect(fileSidebarLabel({ mimeType: null,      fileName: null      })).not.toContain('undefined');
+        expect(fileSidebarLabel({ mimeType: undefined, fileName: undefined })).not.toContain('undefined');
         expect(fileSidebarLabel({})).not.toContain('undefined');
     });
 
-    it('falls back to "File" when name is null or missing', () => {
-        expect(fileSidebarLabel({ mime: 'image/png', name: null      })).toBe('📷 File');
-        expect(fileSidebarLabel({ mime: 'image/png'                  })).toBe('📷 File');
-        expect(fileSidebarLabel({ mime: 'application/zip', name: null})).toBe('📎 File');
+    it('falls back to "File" when fileName is null or missing', () => {
+        expect(fileSidebarLabel({ mimeType: 'image/png', fileName: null      })).toBe('📷 File');
+        expect(fileSidebarLabel({ mimeType: 'image/png'                      })).toBe('📷 File');
+        expect(fileSidebarLabel({ mimeType: 'application/zip', fileName: null})).toBe('📎 File');
     });
 
-    it('detects PDF by filename extension when mime is generic', () => {
-        expect(fileSidebarLabel({ mime: 'application/octet-stream', name: 'report.pdf' })).toBe('📄 report.pdf');
+    it('detects PDF by filename extension when mimeType is generic', () => {
+        expect(fileSidebarLabel({ mimeType: 'application/octet-stream', fileName: 'report.pdf' })).toBe('📄 report.pdf');
     });
 });
 
@@ -237,5 +237,64 @@ describe('fmt() — timestamp formatting', () => {
         const result = fmt(ts);
         // Should contain digits and a colon — exact value depends on locale
         expect(result).toMatch(/\d{1,2}:\d{2}/);
+    });
+});
+
+// ── buildFileMessage() — canonical schema ─────────────────────────────────
+
+describe('buildFileMessage() — canonical file message schema', () => {
+    const base = {
+        sender: 'me',
+        fileName: 'photo.jpg',
+        fileSize: 12345,
+        mimeType: 'image/jpeg',
+        fileId: 'test-uuid-1234',
+        blobUrl: 'blob:http://localhost/abc',
+    };
+
+    it('sets type to "file"', () => {
+        expect(buildFileMessage(base).type).toBe('file');
+    });
+
+    it('carries fileName — never undefined', () => {
+        const msg = buildFileMessage(base);
+        expect(msg.fileName).toBeDefined();
+        expect(msg.fileName).toBe('photo.jpg');
+    });
+
+    it('carries fileSize, mimeType, fileId', () => {
+        const msg = buildFileMessage(base);
+        expect(msg.fileSize).toBe(12345);
+        expect(msg.mimeType).toBe('image/jpeg');
+        expect(msg.fileId).toBe('test-uuid-1234');
+    });
+
+    it('defaults blobUrl to null when omitted', () => {
+        const msg = buildFileMessage({ ...base, blobUrl: undefined });
+        expect(msg.blobUrl).toBeNull();
+    });
+
+    it('preserves blobUrl when provided', () => {
+        const msg = buildFileMessage(base);
+        expect(msg.blobUrl).toBe('blob:http://localhost/abc');
+    });
+
+    it('receiver fileName matches sender fileName — no field drift', () => {
+        const senderMsg = buildFileMessage({ ...base, sender: 'me' });
+        const receiverMsg = buildFileMessage({
+            sender: 'them',
+            fileName: base.fileName,   // comes from transfer-start detail.name
+            fileSize: base.fileSize,
+            mimeType: base.mimeType,
+            fileId: base.fileId,
+        });
+        expect(receiverMsg.fileName).toBeDefined();
+        expect(receiverMsg.fileName).toBe(senderMsg.fileName);
+    });
+
+    it('includes a time string', () => {
+        const msg = buildFileMessage(base);
+        expect(typeof msg.time).toBe('string');
+        expect(msg.time).toMatch(/\d{1,2}:\d{2}/);
     });
 });

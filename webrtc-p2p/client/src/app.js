@@ -46,14 +46,27 @@ export function fmtSize(bytes) {
 }
 
 // Canonical file message schema stored in conv.messages:
-// { type:'file', sender:'me'|'them', name, mime, size, blobUrl, time, _xferId? }
+// { type:'file', sender:'me'|'them', fileName, fileSize, mimeType, fileId, blobUrl, time }
 // blobUrl is null while in-progress; set to a blob URL when file-received fires.
-// _xferId is the transfer UUID used to update the stub on file-received (receiver only).
+// fileId is the transfer UUID — used on the receiver side to match the stub on file-received.
+
+export function buildFileMessage({ sender, fileName, fileSize, mimeType, fileId, blobUrl = null }) {
+    return {
+        type: 'file',
+        sender,
+        fileName,
+        fileSize,
+        mimeType,
+        fileId,
+        blobUrl,
+        time: fmt(Date.now()),
+    };
+}
 
 export function fileSidebarLabel(msg) {
-    const cat = fileCategory(msg.mime || '', msg.name || '');
+    const cat = fileCategory(msg.mimeType || '', msg.fileName || '');
     const icons = { image: '📷', video: '🎥', audio: '🎵', pdf: '📄' };
-    return `${icons[cat] || '📎'} ${msg.name || 'File'}`;
+    return `${icons[cat] || '📎'} ${msg.fileName || 'File'}`;
 }
 
 function catIcon(cat) {
@@ -93,11 +106,13 @@ window.joinRoom = function () {
     fileManager.addEventListener('transfer-start', ({ detail: { id, name, size, mime, from } }) => {
         ensureConv(from);
         const entry = makeFileBubble('in', name, id);
-        conversations[from].messages.push({
-            type: 'file', sender: 'them',
-            name, size, mime, blobUrl: null,
-            time: fmt(Date.now()), _xferId: id,
-        });
+        conversations[from].messages.push(buildFileMessage({
+            sender: 'them',
+            fileName: name,
+            fileSize: size,
+            mimeType: mime,
+            fileId: id,
+        }));
         if (activePeerId === from) {
             document.getElementById('messages-area').appendChild(entry.wrap);
             scrollEnd();
@@ -122,11 +137,14 @@ window.joinRoom = function () {
         const url = URL.createObjectURL(blob);
         _blobUrls.push(url);
 
-        // Update stored message with complete data so any re-render shows the preview
+        // Replace stored stub with a fully-populated immutable message object so any
+        // re-render (rerenderMessages) always sees a new reference with blobUrl set.
         const conv = conversations[from];
         if (conv) {
-            const m = conv.messages.find(x => x.type === 'file' && x._xferId === id);
-            if (m) { m.mime = mime; m.blobUrl = url; m.name = name; }
+            const idx = conv.messages.findIndex(x => x.type === 'file' && x.fileId === id);
+            if (idx !== -1) {
+                conv.messages[idx] = { ...conv.messages[idx], blobUrl: url, mimeType: mime, fileName: name };
+            }
         }
 
         const entry = activeTransfers.get(id);
@@ -442,13 +460,13 @@ function appendBubble(msg, scroll = true) {
 
         const nameEl = document.createElement('div');
         nameEl.className = 'file-xfer-name';
-        nameEl.innerHTML = `<i class="fa-solid fa-file"></i>${esc(msg.name)}`;
+        nameEl.innerHTML = `<i class="fa-solid fa-file"></i>${esc(msg.fileName)}`;
         bubble.appendChild(nameEl);
 
         if (msg.blobUrl) {
             const contentEl = document.createElement('div');
             contentEl.className = 'file-xfer-content';
-            renderReceivedPreview(contentEl, msg.blobUrl, msg.name, msg.mime, msg.size);
+            renderReceivedPreview(contentEl, msg.blobUrl, msg.fileName, msg.mimeType, msg.fileSize);
             bubble.appendChild(contentEl);
         }
 
@@ -573,17 +591,16 @@ async function sendAllPendingFiles() {
     const area = document.getElementById('messages-area');
     const entries = filesToSend.map(({ id, file }) => {
         const entry = makeFileBubble('out', file.name, id);
-        // Store a complete, re-renderable message in conv.messages
         const blobUrl = URL.createObjectURL(file);
         _blobUrls.push(blobUrl);
-        conv.messages.push({
-            type: 'file', sender: 'me',
-            name: file.name,
-            mime: file.type || 'application/octet-stream',
-            size: file.size,
+        conv.messages.push(buildFileMessage({
+            sender: 'me',
+            fileName: file.name,
+            fileSize: file.size,
+            mimeType: file.type || 'application/octet-stream',
+            fileId: id,
             blobUrl,
-            time: fmt(Date.now()),
-        });
+        }));
         area.appendChild(entry.wrap);
         return { id, file, entry };
     });
