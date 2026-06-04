@@ -1,8 +1,8 @@
 // mediaManager.js — getUserMedia wrapper with 720p constraints + typed errors
 
 const VIDEO_CONSTRAINTS = {
-    width:  { ideal: 1280 },
-    height: { ideal: 720 },
+    width:     { ideal: 1920 },
+    height:    { ideal: 1080 },
     frameRate: { ideal: 30 },
 };
 const AUDIO_CONSTRAINTS = {

@@ -29,8 +29,8 @@ describe('getLocalStream() — constraints', () => {
         await getLocalStream();
 
         const [constraints] = mockFn.mock.calls[0];
-        expect(constraints.video.width.ideal).toBe(1280);
-        expect(constraints.video.height.ideal).toBe(720);
+        expect(constraints.video.width.ideal).toBe(1920);
+        expect(constraints.video.height.ideal).toBe(1080);
         expect(constraints.video.frameRate.ideal).toBe(30);
         expect(constraints.audio.echoCancellation).toBe(true);
         expect(constraints.audio.noiseSuppression).toBe(true);

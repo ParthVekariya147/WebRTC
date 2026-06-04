@@ -233,7 +233,7 @@
         .chat-top {
             height: 64px; background: var(--bg-header);
             border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; padding: 0 16px; gap: 14px;
+            display: flex; align-items: center; padding: 0 64px 0 16px; gap: 14px;
             flex-shrink: 0; box-shadow: var(--shadow-sm);
         }
         .chat-top-info h2 { font-size: 0.97rem; font-weight: 600; }
@@ -588,6 +588,51 @@
             .video-chat-drawer.open { right: 0; }
         }
 
+        /* ── Chat header video action buttons ── */
+        .chat-video-actions {
+            display: none; align-items: center; gap: 2px; flex-shrink: 0;
+        }
+        .chat-video-actions.visible { display: flex; }
+
+        .video-action-btn {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 2px; width: 46px; height: 46px; border-radius: 10px;
+            border: none; cursor: pointer; font-size: 1rem; font-family: inherit;
+            background: none; transition: background 0.15s, transform 0.12s; padding: 0; flex-shrink: 0;
+        }
+        .video-action-btn .btn-label {
+            font-size: 0.52rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+        }
+        .video-action-btn:hover { transform: scale(1.08); }
+        .video-action-btn:disabled { opacity: 0.32; cursor: not-allowed; transform: none !important; }
+
+        .video-action-btn.call-btn { color: var(--online); }
+        .video-action-btn.call-btn:hover { background: rgba(49,162,76,.12); }
+        .video-action-btn.live-btn { color: #dc2626; }
+        .video-action-btn.live-btn:hover { background: rgba(220,38,38,.10); }
+        [data-theme="dark"] .video-action-btn.live-btn { color: #f87171; }
+
+        /* ── Video mode badge ── */
+        .video-mode-badge {
+            display: none; position: absolute; top: 14px; left: 50%;
+            transform: translateX(-50%); padding: 4px 14px; border-radius: 20px;
+            z-index: 10; font-size: 0.7rem; font-weight: 800; letter-spacing: .1em; color: #fff;
+            align-items: center; gap: 7px; backdrop-filter: blur(6px); pointer-events: none;
+            white-space: nowrap;
+        }
+        .video-mode-badge.live { display: flex; background: rgba(220,38,38,.82); }
+        .video-mode-badge.call { display: flex; background: rgba(0,132,255,.78); }
+        .video-mode-badge .badge-pulse {
+            width: 7px; height: 7px; border-radius: 50%; background: #fff;
+            animation: badge-pulse 1.4s ease-in-out infinite; flex-shrink: 0;
+        }
+        @keyframes badge-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.45;transform:scale(.75)} }
+
+        /* Viewer controls hidden by default; broadcaster controls hidden in viewer mode */
+        .vctr-viewer-only { display: none !important; }
+        .video-overlay[data-mode="viewer"] .vctr-broadcaster { display: none !important; }
+        .video-overlay[data-mode="viewer"] .vctr-viewer-only { display: flex !important; }
+
         /* Scrollbar */
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -824,10 +869,19 @@
                 <h2 id="active-peer-name">Peer</h2>
                 <p id="active-peer-status">Connecting…</p>
             </div>
-            <button class="icon-btn" id="video-call-btn" onclick="startBroadcast()"
-                    title="Start video call" style="display:none; color:var(--online)">
-                <i class="fa-solid fa-video"></i>
-            </button>
+            <!-- Video action buttons — always in DOM, disabled until peer is online -->
+            <div class="chat-video-actions" id="chat-video-actions">
+                <button class="video-action-btn call-btn" id="video-call-btn"
+                        onclick="startVideoCall()" title="Video Call (two-way)" disabled>
+                    <i class="fa-solid fa-video"></i>
+                    <span class="btn-label">Call</span>
+                </button>
+                <button class="video-action-btn live-btn" id="video-live-btn"
+                        onclick="startLiveStream()" title="Go Live (one-way broadcast)" disabled>
+                    <i class="fa-solid fa-tower-broadcast"></i>
+                    <span class="btn-label">Live</span>
+                </button>
+            </div>
         </div>
 
         <div id="ice-bar"><i class="fa-solid fa-circle-notch fa-spin"></i> &nbsp;Establishing direct connection…</div>
@@ -875,11 +929,17 @@
 <!-- ── VIDEO OVERLAY (Phase 5A) ── -->
 <div id="video-overlay" class="video-overlay" style="display:none">
 
+    <!-- Mode badge — shows LIVE or VIDEO CALL -->
+    <div class="video-mode-badge" id="video-mode-badge">
+        <span class="badge-pulse"></span>
+        <span id="video-mode-text">LIVE</span>
+    </div>
+
     <!-- Video grid -->
     <div id="video-grid" class="video-grid" data-count="0"></div>
 
-    <!-- Controls bar -->
-    <div class="video-controls">
+    <!-- Broadcaster controls (hidden in viewer mode via CSS data-mode) -->
+    <div class="video-controls vctr-broadcaster">
         <button class="vctr-btn chat-vctr-btn" id="video-chat-btn"
                 onclick="toggleVideoChat()" title="Chat">
             <i class="fa-solid fa-comment"></i>
@@ -896,6 +956,17 @@
         <button class="vctr-btn end-call" id="video-stop-btn"
                 onclick="stopBroadcast()" title="End broadcast">
             <i class="fa-solid fa-phone-slash"></i>
+        </button>
+    </div>
+
+    <!-- Viewer-only controls — no mic/camera, just chat + leave -->
+    <div class="video-controls vctr-viewer-only">
+        <button class="vctr-btn chat-vctr-btn" onclick="toggleVideoChat()" title="Chat">
+            <i class="fa-solid fa-comment"></i>
+            <span>Chat</span>
+        </button>
+        <button class="vctr-btn end-call" onclick="stopBroadcast()" title="Leave stream">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
         </button>
     </div>
 

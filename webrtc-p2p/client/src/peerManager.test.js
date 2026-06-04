@@ -64,6 +64,7 @@ class MockRTCPeerConnection {
     createDataChannel(label) { return new MockDataChannel(label); }
 
     addTrack() {}
+    getTransceivers() { return []; }
     close() { this._closed = true; this.signalingState = 'closed'; }
 }
 

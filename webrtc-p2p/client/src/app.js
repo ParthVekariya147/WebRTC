@@ -31,7 +31,8 @@ const activeTransfers = new Map();
 const _blobUrls = [];
 
 // Phase 5A — video state
-let localStream = null; // null when not broadcasting
+let localStream = null;    // null when not broadcasting
+let broadcastMode = null;  // 'call' | 'live' | null
 
 // ── Pure helpers (exported for tests) ──────────────────────────────────────
 export function fileCategory(mime = '', name = '') {
@@ -202,7 +203,8 @@ window.joinRoom = function () {
     peerManager.addEventListener('track', ({ detail: { peerId, stream } }) => {
         dbg(`[TRACK] received from ${peerId}`);
         addVideoTile(peerId, stream, false);
-        showVideoOverlay(false);
+        // Only switch to viewer overlay if we aren't already broadcasting
+        if (!localStream) showVideoOverlay(false);
     });
 
     peerManager.addEventListener('peerleft', ({ detail: { peerId } }) => {
@@ -431,6 +433,9 @@ function refreshChatTop(peerId) {
     const av     = document.getElementById('chat-top-avatar');
     const callBtn = document.getElementById('video-call-btn');
 
+    const actionsGroup = document.getElementById('chat-video-actions');
+    const liveBtn      = document.getElementById('video-live-btn');
+
     if (isRoom) {
         const onlineCount = Object.keys(conversations)
             .filter(k => k !== ROOM_ID && conversations[k]?.status === 'online').length;
@@ -438,7 +443,7 @@ function refreshChatTop(peerId) {
         st.textContent = onlineCount ? `${onlineCount} peer${onlineCount > 1 ? 's' : ''} connected` : 'No peers connected';
         st.className = onlineCount ? 'online' : '';
         av.className = 'avatar group';
-        if (callBtn) callBtn.style.display = 'none';
+        if (actionsGroup) actionsGroup.classList.remove('visible');
         return;
     }
 
@@ -447,7 +452,14 @@ function refreshChatTop(peerId) {
     st.textContent = isOnline ? 'Online — Direct P2P' : (conv?.status === 'connecting' ? 'Connecting…' : 'Offline');
     st.className = isOnline ? 'online' : (conv?.status === 'offline' ? 'offline' : '');
     av.className = `avatar ${isOnline ? 'online' : ''}`;
-    if (callBtn) callBtn.style.display = (isOnline && !localStream) ? '' : 'none';
+
+    // Show video action group for all peer chats; disable buttons until connected + not already streaming
+    if (actionsGroup) {
+        actionsGroup.classList.toggle('visible', !localStream);
+        const canStart = isOnline && !localStream;
+        if (callBtn) callBtn.disabled = !canStart;
+        if (liveBtn) liveBtn.disabled = !canStart;
+    }
 }
 
 // ── Re-render messages area from stored conv.messages ──────────────────────
@@ -802,30 +814,60 @@ window.closeLightbox = function () {
 
 // ── Phase 5A: Video overlay ────────────────────────────────────────────────
 
+// Two-way video call — both sides can start their own camera
+window.startVideoCall = async function () {
+    await _doBroadcast('call');
+};
+
+// One-way live stream — broadcaster sends only, viewer watches
+window.startLiveStream = async function () {
+    await _doBroadcast('live');
+};
+
+// Legacy alias kept for any remaining callers
 window.startBroadcast = async function () {
+    await _doBroadcast('call');
+};
+
+async function _doBroadcast(mode) {
     if (!peerManager) return;
-    const btn = document.getElementById('video-call-btn');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>'; }
+    const callBtn = document.getElementById('video-call-btn');
+    const liveBtn = document.getElementById('video-live-btn');
+    if (callBtn) { callBtn.disabled = true; callBtn.querySelector('i').className = 'fa-solid fa-circle-notch fa-spin'; }
+    if (liveBtn) liveBtn.disabled = true;
 
     try {
         localStream = await getLocalStream({ video: true, audio: true });
+        broadcastMode = mode;
         peerManager.setLocalStream(localStream);
         addVideoTile('__self__', localStream, true);
-        showVideoOverlay(true);
+        showVideoOverlay(true, mode);
+        // Hide the button group while streaming
+        const actionsGroup = document.getElementById('chat-video-actions');
+        if (actionsGroup) actionsGroup.classList.remove('visible');
     } catch (err) {
+        // Clean up any partially-acquired stream so the camera light goes off
+        stopStream(localStream);
+        localStream = null;
+        broadcastMode = null;
         const msg = err instanceof MediaError ? err.message : 'Could not access camera/microphone.';
         if (activePeerId) sysMsg(activePeerId, msg);
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-video"></i>'; }
+        if (callBtn) { callBtn.disabled = false; callBtn.querySelector('i').className = 'fa-solid fa-video'; }
+        if (liveBtn) liveBtn.disabled = false;
     }
-};
+}
 
 window.stopBroadcast = function () {
+    broadcastMode = null;
     stopStream(localStream);
     localStream = null;
     peerManager?.setLocalStream(null);
     document.getElementById('video-grid').innerHTML = '';
     document.getElementById('video-chat-drawer').classList.remove('open');
     hideVideoOverlay();
+    // Restore call-btn icon in case it was replaced with spinner
+    const callBtn = document.getElementById('video-call-btn');
+    if (callBtn) callBtn.querySelector('i').className = 'fa-solid fa-video';
     if (activePeerId) refreshChatTop(activePeerId);
 };
 
@@ -928,18 +970,29 @@ function updateVideoCount() {
     if (grid) grid.dataset.count = grid.childElementCount;
 }
 
-function showVideoOverlay(isBroadcaster) {
+function showVideoOverlay(isBroadcaster, mode = 'call') {
     const overlay = document.getElementById('video-overlay');
     if (!overlay) return;
     overlay.style.display = 'flex';
-    document.getElementById('video-stop-btn').style.display = isBroadcaster ? '' : 'none';
-    document.getElementById('video-mute-btn').style.display  = isBroadcaster ? '' : 'none';
-    document.getElementById('video-camera-btn').style.display = isBroadcaster ? '' : 'none';
+    // CSS rules on data-mode control which control bar is visible
+    overlay.dataset.mode = isBroadcaster ? mode : 'viewer';
+
+    const badge    = document.getElementById('video-mode-badge');
+    const modeText = document.getElementById('video-mode-text');
+    if (badge && modeText) {
+        const isLive = !isBroadcaster || mode === 'live';
+        badge.className = 'video-mode-badge ' + (isLive ? 'live' : 'call');
+        modeText.textContent = isLive ? 'LIVE' : 'VIDEO CALL';
+    }
 }
 
 function hideVideoOverlay() {
     const overlay = document.getElementById('video-overlay');
-    if (overlay) overlay.style.display = 'none';
+    if (!overlay) return;
+    overlay.style.display = 'none';
+    delete overlay.dataset.mode;
+    const badge = document.getElementById('video-mode-badge');
+    if (badge) badge.className = 'video-mode-badge';
 }
 
 function syncVideoDrawer() {

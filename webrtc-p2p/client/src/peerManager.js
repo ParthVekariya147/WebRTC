@@ -4,9 +4,33 @@
 import { ICE_CONFIG } from './iceConfig.js';
 import { log } from './logger.js';
 
-// Cap the ICE candidate queue per peer. Prevents memory DoS from a peer that
-// sends thousands of candidates before setRemoteDescription completes (H5).
 const MAX_PENDING_ICE = 100;
+
+// 5 Mbps ceiling lets 1080p breathe; no floor — ABR degrades gracefully under congestion.
+async function _applyVideoQuality(sender) {
+    try {
+        const params = sender.getParameters();
+        if (!params.encodings?.length) params.encodings = [{}];
+        params.encodings[0].maxBitrate = 5_000_000;
+        params.degradationPreference = 'maintain-resolution'; // drop fps before resolution
+        await sender.setParameters(params);
+    } catch (_) { /* setParameters unsupported — graceful fallback */ }
+}
+
+// Prefer AV1 → VP9 → H264 → VP8 for best quality-per-bit; fallback keeps weak devices working.
+function _applyCodecPreference(transceiver) {
+    try {
+        const caps = RTCRtpReceiver.getCapabilities?.('video');
+        if (!caps || !transceiver.setCodecPreferences) return;
+        const order = ['video/AV1', 'video/VP9', 'video/H264', 'video/VP8'];
+        const sorted = [...caps.codecs].sort((a, b) => {
+            const ai = order.indexOf(a.mimeType);
+            const bi = order.indexOf(b.mimeType);
+            return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+        });
+        transceiver.setCodecPreferences(sorted);
+    } catch (_) { /* codec preferences unsupported — use browser default */ }
+}
 
 export class PeerManager extends EventTarget {
   constructor(localPeerId, signaling) {
@@ -94,7 +118,15 @@ export class PeerManager extends EventTarget {
     };
 
     if (this.localStream) {
-      this.localStream.getTracks().forEach((t) => pc.addTrack(t, this.localStream));
+      this.localStream.getTracks().forEach((t) => {
+        if (t.kind === 'video') t.contentHint = 'detail';
+        const sender = pc.addTrack(t, this.localStream);
+        if (t.kind === 'video') {
+          const transceiver = pc.getTransceivers().find(tr => tr.sender === sender);
+          if (transceiver) _applyCodecPreference(transceiver);
+          _applyVideoQuality(sender);
+        }
+      });
     }
 
     return pc;
@@ -253,9 +285,26 @@ export class PeerManager extends EventTarget {
 
   setLocalStream(stream) {
     this.localStream = stream;
-    if (!stream) return;
+    if (!stream) {
+      // Remove all media senders so remote peers get renegotiation + removetrack event —
+      // without this the remote tile stays frozen/black after stopBroadcast.
+      this.connections.forEach((pc) => {
+        pc.getSenders()
+          .filter(s => s.track)
+          .forEach(s => { try { pc.removeTrack(s); } catch (_) {} });
+      });
+      return;
+    }
     this.connections.forEach((pc) => {
-      stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+      stream.getTracks().forEach((t) => {
+        if (t.kind === 'video') t.contentHint = 'detail';
+        const sender = pc.addTrack(t, stream);
+        if (t.kind === 'video') {
+          const transceiver = pc.getTransceivers().find(tr => tr.sender === sender);
+          if (transceiver) _applyCodecPreference(transceiver);
+          _applyVideoQuality(sender);
+        }
+      });
     });
   }
 
