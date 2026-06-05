@@ -91,15 +91,13 @@ export class PeerManager extends EventTarget {
     };
 
     // Renegotiation path (Phase 5: addTrack for video/audio fires this).
-    // NOT used for the initial offer — _createOffer handles that explicitly.
-    // Guard with _makingOffer so it only fires for renegotiation, not initial setup.
+    // Uses implicit setLocalDescription() — browser atomically creates + sets the
+    // offer, eliminating the stale-signalingState window that caused silent drops.
     pc.onnegotiationneeded = async () => {
-      if (this._makingOffer.get(peerId)) return; // already offering, skip
+      if (this._makingOffer.get(peerId)) return;
       try {
         this._makingOffer.set(peerId, true);
-        const offer = await pc.createOffer();
-        if (pc.signalingState !== 'stable') return; // state changed, abort
-        await pc.setLocalDescription(offer);
+        await pc.setLocalDescription();          // implicit offer — no stale-state gap
         this.signaling.sendOffer(peerId, this.localPeerId, pc.localDescription);
       } catch (err) {
         log.error(`[peer:${peerId}] onnegotiationneeded failed:`, err);

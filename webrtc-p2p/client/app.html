@@ -485,24 +485,17 @@
             overflow: hidden;
         }
 
-        /* Video grid — auto-layout by tile count */
+        /* Video grid — auto-fit WhatsApp-style layout */
         .video-grid {
-            flex: 1; display: grid; gap: 4px; padding: 8px;
-            align-content: center; justify-items: stretch; overflow: hidden;
+            flex: 1; display: grid; gap: 4px; padding: 8px; overflow: hidden;
+            grid-template-columns: repeat(auto-fit, minmax(45%, 1fr));
+            grid-auto-rows: 1fr;   /* rows share available height equally */
+            align-items: stretch;
         }
-        .video-grid[data-count="0"],
-        .video-grid[data-count="1"] { grid-template-columns: 1fr; }
-        .video-grid[data-count="2"] { grid-template-columns: 1fr 1fr; }
-        .video-grid[data-count="3"],
-        .video-grid[data-count="4"] { grid-template-columns: 1fr 1fr; }
-        .video-grid[data-count="5"],
-        .video-grid[data-count="6"] { grid-template-columns: 1fr 1fr 1fr; }
 
         .video-tile {
             position: relative; background: #1a1f27;
-            border-radius: 10px; overflow: hidden;
-            aspect-ratio: 16/9; max-height: calc(50vh - 52px);
-            display: flex; align-items: center; justify-content: center;
+            border-radius: 10px; overflow: hidden; min-height: 0;
         }
         .video-tile video { width: 100%; height: 100%; object-fit: cover; display: block; }
         .video-tile-label {
@@ -511,11 +504,15 @@
             padding: 2px 8px; border-radius: 4px;
             font-size: .72rem; font-weight: 600; letter-spacing: .02em;
         }
-        .video-tile.self-tile { opacity: .92; }
-        .video-tile.camera-off video { visibility: hidden; }
-        .video-tile.camera-off::before {
-            content: '\f007'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
-            font-size: 3rem; color: #555; position: absolute;
+
+        /* Floating self-preview PIP */
+        #local-preview {
+            position: absolute; bottom: calc(72px + 14px); right: 14px;
+            width: 90px; height: 130px; z-index: 20;
+            border-radius: 12px; overflow: hidden; object-fit: cover;
+            box-shadow: 0 4px 20px rgba(0,0,0,.6);
+            cursor: pointer; display: none;
+            transition: opacity .2s;
         }
 
         /* Video controls bar */
@@ -579,13 +576,14 @@
         }
 
         @media (max-width: 640px) {
-            .video-grid[data-count="2"] { grid-template-columns: 1fr; }
-            .video-tile { max-height: 38vh; }
             .video-controls { height: 64px; gap: 10px; padding: 0 12px; }
             .vctr-btn { min-width: 44px; height: 44px; font-size: .95rem; padding: 0 10px; }
             .chat-vctr-btn span { display: none; }
             .video-chat-drawer { bottom: 64px; width: min(320px, 100vw); right: -100vw; border-radius: 0; }
             .video-chat-drawer.open { right: 0; }
+            #local-preview { bottom: calc(64px + 14px); }
+            /* Show switch-camera button only on mobile */
+            .vctr-switch-btn { display: flex !important; }
         }
 
         /* ── Chat header video action buttons ── */
@@ -935,8 +933,12 @@
         <span id="video-mode-text">LIVE</span>
     </div>
 
-    <!-- Video grid -->
+    <!-- Video grid (remote peers only — self is in the PIP below) -->
     <div id="video-grid" class="video-grid" data-count="0"></div>
+
+    <!-- Floating self-preview PIP (tap to switch camera on mobile) -->
+    <video id="local-preview" autoplay playsinline muted
+           onclick="switchCamera()" title="Tap to switch camera"></video>
 
     <!-- Broadcaster controls (hidden in viewer mode via CSS data-mode) -->
     <div class="video-controls vctr-broadcaster">
@@ -952,6 +954,11 @@
         <button class="vctr-btn" id="video-camera-btn"
                 onclick="toggleCamera()" title="Pause camera">
             <i class="fa-solid fa-video"></i>
+        </button>
+        <!-- Switch camera — hidden on desktop, shown on mobile via CSS -->
+        <button class="vctr-btn vctr-switch-btn" style="display:none"
+                onclick="switchCamera()" title="Switch camera">
+            <i class="fa-solid fa-camera-rotate"></i>
         </button>
         <button class="vctr-btn end-call" id="video-stop-btn"
                 onclick="stopBroadcast()" title="End broadcast">

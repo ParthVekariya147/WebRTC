@@ -864,11 +864,51 @@ window.stopBroadcast = function () {
     peerManager?.setLocalStream(null);
     document.getElementById('video-grid').innerHTML = '';
     document.getElementById('video-chat-drawer').classList.remove('open');
+    const preview = document.getElementById('local-preview');
+    if (preview) { preview.srcObject = null; preview.style.display = 'none'; preview.style.opacity = '1'; }
     hideVideoOverlay();
     // Restore call-btn icon in case it was replaced with spinner
     const callBtn = document.getElementById('video-call-btn');
     if (callBtn) callBtn.querySelector('i').className = 'fa-solid fa-video';
     if (activePeerId) refreshChatTop(activePeerId);
+};
+
+window.switchCamera = async function () {
+    if (!localStream) return;
+    const current = localStream.getVideoTracks()[0];
+    if (!current) return;
+
+    const currentFacing = current.getSettings?.()?.facingMode || 'user';
+    const nextFacing    = currentFacing === 'user' ? 'environment' : 'user';
+
+    try {
+        const ns = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { exact: nextFacing } },
+            audio: false,
+        });
+        const newTrack = ns.getVideoTracks()[0];
+
+        // Swap track in every peer connection without renegotiation
+        peerManager.connections.forEach((pc) => {
+            const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+            if (sender) sender.replaceTrack(newTrack);
+        });
+
+        // Swap in local stream so stopStream() later can clean up the new track
+        current.stop();
+        localStream.removeTrack(current);
+        localStream.addTrack(newTrack);
+
+        // Update PIP preview
+        const preview = document.getElementById('local-preview');
+        if (preview) {
+            preview.srcObject = null;
+            preview.srcObject = localStream;
+            preview.play().catch(() => {});
+        }
+    } catch (_) {
+        // facingMode:{exact} throws on desktop or single-camera devices — silently ignore
+    }
 };
 
 window.toggleMic = function () {
@@ -897,9 +937,9 @@ window.toggleCamera = function () {
             : '<i class="fa-solid fa-video-slash"></i>';
         btn.classList.toggle('vctr-muted', !track.enabled);
     }
-    // Grey out the self-tile when camera is paused
-    const selfTile = document.querySelector('.video-tile.self-tile');
-    if (selfTile) selfTile.classList.toggle('camera-off', !track.enabled);
+    // Dim PIP preview when camera is paused
+    const preview = document.getElementById('local-preview');
+    if (preview) preview.style.opacity = track.enabled ? '1' : '0.25';
 };
 
 window.toggleVideoChat = function () {
@@ -929,39 +969,55 @@ window.sendVideoChat = function () {
 };
 
 function addVideoTile(peerId, stream, isSelf) {
+    if (isSelf) {
+        // Self goes to the floating PIP, not the grid
+        const preview = document.getElementById('local-preview');
+        if (preview) {
+            preview.style.display = 'block';
+            preview.srcObject = stream;         // PIP is already in DOM
+            preview.play().catch(() => {});
+        }
+        return;
+    }
+
     const grid = document.getElementById('video-grid');
     if (!grid) return;
     removeVideoTile(peerId);
 
     const tile = document.createElement('div');
-    tile.className = `video-tile${isSelf ? ' self-tile' : ''}`;
+    tile.className = 'video-tile';
     tile.dataset.peer = peerId;
 
     const video = document.createElement('video');
-    video.srcObject = stream;
     video.autoplay = true;
     video.playsInline = true;
-    if (isSelf) video.muted = true;
+    // srcObject MUST be set after DOM append — iOS Safari silently fails otherwise
 
     const label = document.createElement('div');
     label.className = 'video-tile-label';
-    label.textContent = isSelf ? 'You' : peerId;
+    label.textContent = peerId;
 
     tile.appendChild(video);
     tile.appendChild(label);
-    grid.appendChild(tile);
+    grid.appendChild(tile);          // append first
+    video.srcObject = stream;        // then assign srcObject
+    video.play().catch(() => {});    // explicit play — beats browser autoplay policy
     updateVideoCount();
 }
 
 function removeVideoTile(peerId) {
+    if (peerId === '__self__') {
+        const preview = document.getElementById('local-preview');
+        if (preview) { preview.srcObject = null; preview.style.display = 'none'; }
+        return;
+    }
     const grid = document.getElementById('video-grid');
     if (!grid) return;
-    // CSS.escape is safe but not available in all test envs; use querySelector with data attr
     const el = Array.from(grid.querySelectorAll('.video-tile')).find(t => t.dataset.peer === peerId);
     if (el) el.remove();
     updateVideoCount();
 
-    // If no tiles remain and we're not broadcasting, hide the overlay
+    // If no remote tiles remain and we're not broadcasting, hide the overlay
     if (grid.childElementCount === 0 && !localStream) hideVideoOverlay();
 }
 
