@@ -8,7 +8,11 @@ function makeMockTrack(kind = 'video') {
 }
 
 function makeStream(tracks = [makeMockTrack()]) {
-    return { getTracks: () => tracks };
+    return {
+        getTracks:      () => tracks,
+        getVideoTracks: () => tracks.filter(t => t.kind === 'video'),
+        getAudioTracks: () => tracks.filter(t => t.kind === 'audio'),
+    };
 }
 
 function stubGetUserMedia(impl) {

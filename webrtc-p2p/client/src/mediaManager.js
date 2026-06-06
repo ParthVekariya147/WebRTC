@@ -20,13 +20,30 @@ export class MediaError extends Error {
     }
 }
 
-export async function getLocalStream({ video = true, audio = true } = {}) {
+export async function getLocalStream({ video = true, audio = true, facingMode = null } = {}) {
     const constraints = {};
-    if (video) constraints.video = VIDEO_CONSTRAINTS;
+    if (video) {
+        constraints.video = facingMode
+            ? { ...VIDEO_CONSTRAINTS, facingMode }
+            : VIDEO_CONSTRAINTS;
+    }
     if (audio) constraints.audio = AUDIO_CONSTRAINTS;
 
     try {
-        return await navigator.mediaDevices.getUserMedia(constraints);
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        // Force x1.0 wide-angle lens — on iPhones the OS defaults to telephoto.
+        // applyConstraints({ zoom: min }) picks the widest available lens.
+        if (video) {
+            const track = stream.getVideoTracks()[0];
+            const caps = track?.getCapabilities?.();
+            if (caps?.zoom) {
+                await track.applyConstraints({ advanced: [{ zoom: caps.zoom.min }] })
+                    .catch(() => {}); // silently ignore — older browsers don't support zoom
+            }
+        }
+
+        return stream;
     } catch (err) {
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
             throw new MediaError('permission-denied',

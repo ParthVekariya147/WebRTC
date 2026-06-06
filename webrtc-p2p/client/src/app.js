@@ -882,10 +882,8 @@ window.switchCamera = async function () {
     const nextFacing    = currentFacing === 'user' ? 'environment' : 'user';
 
     try {
-        const ns = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { exact: nextFacing } },
-            audio: false,
-        });
+        // Route through getLocalStream so zoom=min (x1.0 wide) is applied automatically
+        const ns = await getLocalStream({ video: true, audio: false, facingMode: { exact: nextFacing } });
         const newTrack = ns.getVideoTracks()[0];
 
         // Swap track in every peer connection without renegotiation
