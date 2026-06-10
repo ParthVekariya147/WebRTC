@@ -846,7 +846,8 @@ async function _doBroadcast(mode) {
     try {
         localStream = await getLocalStream({ video: true, audio: true });
         broadcastMode = mode;
-        peerManager.setLocalStream(localStream);
+        // Call mode targets only the active peer; Live mode broadcasts to everyone (null = all)
+        peerManager.setLocalStream(localStream, mode === 'call' ? activePeerId : null);
         addVideoTile('__self__', localStream, true);
         showVideoOverlay(true, mode);
         // Hide the button group while streaming

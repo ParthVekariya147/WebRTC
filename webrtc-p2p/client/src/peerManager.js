@@ -49,6 +49,8 @@ export class PeerManager extends EventTarget {
     this._makingOffer = new Map();
 
     this.localStream = null;
+    // null = broadcast to all (Live); a peerId = 1-on-1 Call target
+    this._broadcastTarget = null;
 
     signaling.addEventListener('room-peers', (e) => {
       // Guard: skip peers we already have a connection for (H4).
@@ -115,7 +117,9 @@ export class PeerManager extends EventTarget {
       this.dispatchEvent(new CustomEvent('track', { detail: { peerId, stream: e.streams[0] } }));
     };
 
-    if (this.localStream) {
+    // Only add tracks if there is no targeted call, or if this peer IS the target.
+    // Prevents a peer joining after a targeted call starts from receiving the stream.
+    if (this.localStream && (this._broadcastTarget === null || this._broadcastTarget === peerId)) {
       this.localStream.getTracks().forEach((t) => {
         if (t.kind === 'video') t.contentHint = 'detail';
         const sender = pc.addTrack(t, this.localStream);
@@ -281,8 +285,9 @@ export class PeerManager extends EventTarget {
     this.dispatchEvent(new CustomEvent('peerleft', { detail: { peerId } }));
   }
 
-  setLocalStream(stream) {
+  setLocalStream(stream, targetPeerId = null) {
     this.localStream = stream;
+    this._broadcastTarget = stream ? targetPeerId : null;
     if (!stream) {
       // Remove all media senders so remote peers get renegotiation + removetrack event —
       // without this the remote tile stays frozen/black after stopBroadcast.
@@ -293,7 +298,14 @@ export class PeerManager extends EventTarget {
       });
       return;
     }
-    this.connections.forEach((pc) => {
+    // targetPeerId=null → broadcast to all (Live mode); a specific ID → 1-on-1 Call
+    const targets = targetPeerId
+      ? (this.connections.has(targetPeerId)
+          ? [[targetPeerId, this.connections.get(targetPeerId)]]
+          : [])
+      : Array.from(this.connections.entries());
+
+    targets.forEach(([, pc]) => {
       stream.getTracks().forEach((t) => {
         if (t.kind === 'video') t.contentHint = 'detail';
         const sender = pc.addTrack(t, stream);
