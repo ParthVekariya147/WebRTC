@@ -12,7 +12,7 @@ async function _applyVideoQuality(sender) {
         const params = sender.getParameters();
         if (!params.encodings?.length) params.encodings = [{}];
         params.encodings[0].maxBitrate = 5_000_000;
-        params.degradationPreference = 'maintain-resolution'; // drop fps before resolution
+        params.degradationPreference = 'balanced'; // degrade fps AND resolution proportionally under congestion
         await sender.setParameters(params);
     } catch (_) { /* setParameters unsupported — graceful fallback */ }
 }
