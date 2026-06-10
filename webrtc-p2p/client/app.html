@@ -966,11 +966,15 @@
         </button>
     </div>
 
-    <!-- Viewer-only controls — no mic/camera, just chat + leave -->
+    <!-- Viewer-only controls — chat + start camera + leave -->
     <div class="video-controls vctr-viewer-only">
         <button class="vctr-btn chat-vctr-btn" onclick="toggleVideoChat()" title="Chat">
             <i class="fa-solid fa-comment"></i>
             <span>Chat</span>
+        </button>
+        <button class="vctr-btn" onclick="startVideoCall()" title="Start your camera to join the call">
+            <i class="fa-solid fa-video"></i>
+            <span style="font-size:.7rem">Start Cam</span>
         </button>
         <button class="vctr-btn end-call" onclick="stopBroadcast()" title="Leave stream">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>

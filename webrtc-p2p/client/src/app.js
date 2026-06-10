@@ -203,8 +203,15 @@ window.joinRoom = function () {
     peerManager.addEventListener('track', ({ detail: { peerId, stream } }) => {
         dbg(`[TRACK] received from ${peerId}`);
         addVideoTile(peerId, stream, false);
-        // Only switch to viewer overlay if we aren't already broadcasting
-        if (!localStream) showVideoOverlay(false);
+        if (!localStream) {
+            // Only switch chat context when the overlay is not already open — avoids
+            // a disruptive chat-panel flash if B is mid-conversation with someone else.
+            const overlay = document.getElementById('video-overlay');
+            if ((!overlay.style.display || overlay.style.display === 'none') && activePeerId !== peerId) {
+                openChat(peerId);
+            }
+            showVideoOverlay(false);
+        }
     });
 
     peerManager.addEventListener('peerleft', ({ detail: { peerId } }) => {
