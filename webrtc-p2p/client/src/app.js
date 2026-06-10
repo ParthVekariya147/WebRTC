@@ -882,8 +882,9 @@ window.switchCamera = async function () {
     const nextFacing    = currentFacing === 'user' ? 'environment' : 'user';
 
     try {
-        // Route through getLocalStream so zoom=min (x1.0 wide) is applied automatically
-        const ns = await getLocalStream({ video: true, audio: false, facingMode: { exact: nextFacing } });
+        // Use ideal (not exact) so getUserMedia degrades gracefully on devices that
+        // don't advertise facingMode rather than throwing OverconstrainedError silently.
+        const ns = await getLocalStream({ video: true, audio: false, facingMode: { ideal: nextFacing } });
         const newTrack = ns.getVideoTracks()[0];
 
         // Swap track in every peer connection without renegotiation
