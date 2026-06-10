@@ -1,10 +1,20 @@
-// mediaManager.js — getUserMedia wrapper with 720p constraints + typed errors
+// mediaManager.js — getUserMedia wrapper with facing-aware constraints + typed errors
 
-const VIDEO_CONSTRAINTS = {
+// Rear cameras can output 1080p natively without cropping.
+const VIDEO_CONSTRAINTS_REAR = {
     width:     { ideal: 1920 },
     height:    { ideal: 1080 },
     frameRate: { ideal: 30 },
 };
+
+// Front (selfie) cameras on most phones have a native resolution of 720p or lower.
+// Requesting 1080p causes the OS to crop or digitally zoom — use 720p to avoid this.
+const VIDEO_CONSTRAINTS_FRONT = {
+    width:     { ideal: 1280 },
+    height:    { ideal: 720 },
+    frameRate: { ideal: 30 },
+};
+
 const AUDIO_CONSTRAINTS = {
     echoCancellation: true,
     noiseSuppression: true,
@@ -23,9 +33,15 @@ export class MediaError extends Error {
 export async function getLocalStream({ video = true, audio = true, facingMode = null } = {}) {
     const constraints = {};
     if (video) {
+        const isRear = facingMode && (
+            facingMode === 'environment' ||
+            facingMode?.exact === 'environment' ||
+            facingMode?.ideal === 'environment'
+        );
+        const baseConstraints = isRear ? VIDEO_CONSTRAINTS_REAR : VIDEO_CONSTRAINTS_FRONT;
         constraints.video = facingMode
-            ? { ...VIDEO_CONSTRAINTS, facingMode }
-            : VIDEO_CONSTRAINTS;
+            ? { ...baseConstraints, facingMode }
+            : baseConstraints;
     }
     if (audio) constraints.audio = AUDIO_CONSTRAINTS;
 

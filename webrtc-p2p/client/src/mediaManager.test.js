@@ -26,18 +26,30 @@ function stubGetUserMedia(impl) {
 // ── getLocalStream() ────────────────────────────────────────────────────────
 
 describe('getLocalStream() — constraints', () => {
-    it('requests 720p video + echo-cancelled audio by default', async () => {
+    it('requests 720p video + echo-cancelled audio by default (front-cam constraints)', async () => {
         const mockFn = vi.fn(() => Promise.resolve(makeStream()));
         stubGetUserMedia(mockFn);
 
         await getLocalStream();
 
         const [constraints] = mockFn.mock.calls[0];
-        expect(constraints.video.width.ideal).toBe(1920);
-        expect(constraints.video.height.ideal).toBe(1080);
+        // No facingMode → front-camera constraints (1280×720) to avoid crop/zoom on selfie sensors
+        expect(constraints.video.width.ideal).toBe(1280);
+        expect(constraints.video.height.ideal).toBe(720);
         expect(constraints.video.frameRate.ideal).toBe(30);
         expect(constraints.audio.echoCancellation).toBe(true);
         expect(constraints.audio.noiseSuppression).toBe(true);
+    });
+
+    it('requests 1080p video when facingMode targets rear camera', async () => {
+        const mockFn = vi.fn(() => Promise.resolve(makeStream()));
+        stubGetUserMedia(mockFn);
+
+        await getLocalStream({ video: true, audio: false, facingMode: { ideal: 'environment' } });
+
+        const [constraints] = mockFn.mock.calls[0];
+        expect(constraints.video.width.ideal).toBe(1920);
+        expect(constraints.video.height.ideal).toBe(1080);
     });
 
     it('omits video constraint when video: false', async () => {
